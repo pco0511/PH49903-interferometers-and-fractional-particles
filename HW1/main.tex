@@ -1,0 +1,99 @@
+\documentclass[a4paper,11pt]{article}
+\usepackage{amsmath,amssymb,amsthm, tikz,titlesec,hyperref,esint,braket, graphicx, mathrsfs, enumitem}
+\usepackage[a4paper,margin=2cm]{geometry}
+\linespread{1.3}
+\newtheorem{claim}{Claim}[section]
+
+\newcommand\name{Park Chanwoo}   % Name of the student
+\newcommand\university{KAIST} % Name of the university
+\newcommand\department{Physics} % Name of the department
+\newcommand\studentid{20230297} % Student ID
+\newcommand\s{\,\;}
+
+
+\newenvironment{solution}[1]
+  {\renewcommand\qedsymbol{$\square$}\begin{proof}[\textbf{Solution#1}]}
+  {\end{proof}}
+\newenvironment{note}
+  {\renewcommand\qedsymbol{$\blacksquare$}\begin{proof}[\textnormal{\textbf{note}}]}
+  {\end{proof}}
+
+\title{KAIST\\2026 Special Topics in Physics Quantum Electronic Devices I: Interferometers and Fractional Particles\\
+Homework 1\bigskip}
+\author{\textbf{\Large \name} \\
+% University: \university\\
+Department: \department\\
+Student ID: \studentid}
+\date{\today}
+
+\begin{document}
+\thispagestyle{empty}
+\maketitle
+\tableofcontents
+\titleformat{\section}[frame]{\pagebreak}{\filright
+\footnotesize  \enspace \textsf{KAIST --- Interferometers and Fractional Particles 2026 Spring}\enspace}{6pt}{\Large\bfseries\filcenter}
+
+\newcommand{\tr}{\operatorname{tr}}
+\newcommand{\sgn}{\operatorname{sgn}}
+\newcommand{\supp}{\operatorname{supp}}
+\renewcommand{\Re}{\operatorname{Re}}
+\renewcommand{\Im}{\operatorname{Im}}
+\newcommand{\boltz}{k_{\mathrm{B}}}
+
+\section{\#1}
+
+Assume $n(t)$ obeys the diffusion equation and the initial condition $n(x,0) = \delta(x)$, Then we can solve the diffusion equation by Fourier transform as follows:
+\begin{gather}
+    \partial_t n(x, t) = D \nabla^2 n(x, t) \implies \partial_t \tilde{n}(k, t) = -D k^2 \tilde{n}(k, t) \\
+    \tilde{n}(k, t) = \tilde{n}(k, 0) e^{-D k^2 t} = e^{-D k^2 t} \\
+    n(x,t) = \frac{1}{(2\pi)^d}\int e^{ik\cdot x} e^{-Dk^2 t} dk= \frac{1}{(4\pi Dt)^{d/2}} \exp\left(-\frac{x^2}{4Dt}\right)
+\end{gather}
+Due to the conservation law of diffusion equation, the denominator is 1:
+\begin{equation}
+    \int n(x,t) dx = 1
+\end{equation}
+And the mean absolute displacement can be evaluated as follows:
+\begin{equation}
+    \langle |x| \rangle = \int |x| n(x,t) dx = \frac{1}{(4\pi Dt)^{d/2}} \int_0^\infty r \exp\left(-\frac{r^2}{4Dt}\right) \Omega_d r^{d-1} dr = \frac{2 \Gamma(\frac{d+1}{2})}{\Gamma(\frac{d}{2})} \sqrt{Dt}
+\end{equation}
+Where $\Omega_d$ is the surface area of the unit sphere in $d$-dimension.
+
+Hence,
+\begin{equation}
+    l(t) \propto \sqrt{Dt}
+\end{equation}
+
+\section{\#2}
+
+The total number of particle can be evaluated by integrating the density of states as follows:
+\begin{equation}
+    N = \sum_{\frac{2\pi}{L}\sqrt{n_x^2 + n_y^2} \le k_F} \sum_{\sigma} 1 \approx \int_{k_x^2 + k_y^2 <= k_F^2} g_s\left(\frac{L}{2\pi}\right)^2 dk_x dk_y = \frac{L^2 g_s k_F^2}{4\pi}
+\end{equation}
+Using the relation $L\times L = V$ and $n_e = N/V$, 
+\begin{eqnarray}
+    n_e = \frac{g_s k_F^2}{4\pi}
+\end{eqnarray}
+
+
+\section{\#3}
+
+Assume that the dispersion relation of the system is given by $E(k) = f(|k|)$. Then the density of states per area can be derived as follows:
+\begin{gather}
+    \sum_{\sigma} \left(\frac{L}{2\pi}\right)^2 dk_x dk_y = 2g_s\pi k \left(\frac{L}{2\pi}\right)^2dk = \frac{2g_s\pi k}{f'(k)} \left(\frac{L}{2\pi}\right)^2 dE = A\rho(E) dE \\
+    \implies \rho(E) = \frac{g_s k}{2\pi f'(k)}
+\end{gather}
+
+
+For the quadratic dispersion relation, $f(k) = \frac{\hbar^2 k^2}{2m}$,
+\begin{equation}
+    \rho(E) = \frac{g_s k}{2\pi f'(k)} = \frac{g_s m}{2\pi \hbar^2}
+\end{equation}
+
+
+For the linear dispersion relation, $f(k) = \hbar v k$,
+\begin{equation}
+    \rho(E) = \frac{g_s k}{2\pi f'(k)} = \frac{g_s k }{2\pi \hbar v} = \frac{g_s E}{2\pi (\hbar v)^2}
+\end{equation}
+
+
+\end{document}

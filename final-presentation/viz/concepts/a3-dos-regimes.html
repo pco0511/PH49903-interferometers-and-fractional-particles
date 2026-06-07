@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>A3 · DOS와 constant-ν ↔ constant-n 전이</title>
+<link rel="stylesheet" href="../shared/style.css">
+<script src="../shared/embed.js"></script>
+</head>
+<body>
+<header>
+  <h1>A3 · Density of states & 영역 전이 (constant-ν ↔ constant-n)</h1>
+  <p>Supp. Fig 5e · 자기장이 중심에서 멀어지면 화학퍼텐셜 μ가 hole-like / particle-like 상태(높은 DOS)로 접근해 quasihole/quasiparticle이 생성되고, 거동이 constant-ν(3Φ₀)에서 constant-n(Φ₀)으로 바뀐다. · <a href="../index.html">← 갤러리</a></p>
+</header>
+
+<div class="wrap">
+  <div class="plots">
+    <div class="card">
+      <h2>DOS(E)와 μ · 점유 f(E)</h2>
+      <canvas id="dos" width="760" height="270"></canvas>
+    </div>
+    <div class="card">
+      <h2>모델 ⟨N_qp⟩ vs B  (현재 B 표시)</h2>
+      <canvas id="nq" width="760" height="170"></canvas>
+    </div>
+  </div>
+  <div class="controls">
+    <div class="card">
+      <h2>제어</h2>
+      <div class="slider">
+        <label>자기장 B <b id="v_B">8.653</b> T</label>
+        <input id="s_B" type="range" min="8.2" max="9.1" step="0.001" value="8.653">
+        <div class="sub">μ 위치를 좌우로 이동 (중심=gap 한가운데)</div>
+      </div>
+      <div class="slider">
+        <label>온도 kT/E_c <b id="v_T">0.020</b></label>
+        <input id="s_T" type="range" min="-3.1" max="-0.7" step="0.01" value="-1.699">
+        <div class="sub">로그 · Fermi 분포 너비 & smearing</div>
+      </div>
+    </div>
+    <div class="card">
+      <h2>현재 영역</h2>
+      <div class="readout">
+        <div><span>regime</span><b id="o_reg">–</b></div>
+        <div><span>B-주기</span><b id="o_per">–</b></div>
+        <div><span>⟨N_qp⟩</span><b id="o_nq">–</b></div>
+        <div><span>μ 위치</span><b id="o_mu">–</b></div>
+      </div>
+    </div>
+    <div class="card">
+      <h2>해석</h2>
+      <p style="font-size:12.5px">중심: μ가 gap 한가운데(낮은 DOS) → quasiparticle 거의 없음 → 음기울기 AB, 3Φ₀.<br>
+      고/저 field: μ가 봉우리(높은 DOS)로 → qp/qh 다수 → Φ₀ phase slip, 그러나 작은 에너지 간격 탓에 thermal smearing으로 평평해짐.</p>
+    </div>
+  </div>
+</div>
+
+<script src="../shared/physics.js"></script>
+<script src="../shared/render.js"></script>
+<script>
+"use strict";
+const el=id=>document.getElementById(id);
+const dos=document.getElementById('dos'), dctx=dos.getContext('2d');
+const nq=document.getElementById('nq'), nctx=nq.getContext('2d');
+const Bc=8.653, DELTA=1.0;                 // gap in arbitrary E-units (peaks at +-Δ/2)
+const P0={A0:0.098e-12,dad:0.120e-12,dqe:1.07,Bc:Bc,ab:0.100,ratio:0.02};
+
+// DOS: two gaussians (hole-like at -Δ/2, particle-like at +Δ/2) + tiny background
+function gauss(E,c,w){ return Math.exp(-((E-c)*(E-c))/(2*w*w)); }
+function DOS(E){ return gauss(E,-DELTA/2,0.13)+gauss(E,+DELTA/2,0.13)+0.02; }
+// mu is DERIVED from the model <N_qp> so the DOS panel and the staircase always agree:
+// <N> = 0  -> mu in gap centre (constant-nu); <N> > 0 (low field, quasiparticles) -> mu
+// approaches particle-like band (+); <N> < 0 (high field, quasiholes) -> hole-like band (-).
+function muOfN(n){ return (DELTA/2)*Math.tanh(n/2.5); }
+
+function drawDOS(B,ratio,mu){
+  const W=dos.width,H=dos.height; dctx.fillStyle='#000'; dctx.fillRect(0,0,W,H);
+  const g={x:40,y:16,w:W-80,h:H-46};
+  const Emin=-1.1,Emax=1.1;
+  const X=E=>g.x+(E-Emin)/(Emax-Emin)*g.w, Y=v=>g.y+(1-v)*g.h;   // v in [0,1.05]
+  const kT=ratio*0.5;   // map kT/E_c to E-units width (illustrative)
+  // occupied shading: integrate DOS*f below
+  dctx.fillStyle='rgba(78,161,255,.18)';
+  dctx.beginPath(); dctx.moveTo(X(Emin),Y(0));
+  for(let i=0;i<=300;i++){ const E=Emin+(Emax-Emin)*i/300; const f=1/(1+Math.exp((E-mu)/Math.max(kT,1e-3)));
+    dctx.lineTo(X(E),Y(DOS(E)*f)); } dctx.lineTo(X(Emax),Y(0)); dctx.closePath(); dctx.fill();
+  // DOS curve
+  dctx.strokeStyle='#cbd3df'; dctx.lineWidth=1.6; dctx.beginPath();
+  for(let i=0;i<=300;i++){ const E=Emin+(Emax-Emin)*i/300; const x=X(E),y=Y(DOS(E)); if(i===0)dctx.moveTo(x,y); else dctx.lineTo(x,y);} dctx.stroke();
+  // Fermi occupation (scaled)
+  dctx.strokeStyle='rgba(143,255,143,.6)'; dctx.lineWidth=1; dctx.beginPath();
+  for(let i=0;i<=300;i++){ const E=Emin+(Emax-Emin)*i/300; const f=1/(1+Math.exp((E-mu)/Math.max(kT,1e-3))); const x=X(E),y=Y(f); if(i===0)dctx.moveTo(x,y); else dctx.lineTo(x,y);} dctx.stroke();
+  // mu line
+  dctx.strokeStyle='#ffd27d'; dctx.lineWidth=1.5; dctx.setLineDash([5,3]);
+  dctx.beginPath(); dctx.moveTo(X(mu),g.y); dctx.lineTo(X(mu),g.y+g.h); dctx.stroke(); dctx.setLineDash([]);
+  dctx.fillStyle='#ffd27d'; dctx.font='11px sans-serif'; dctx.textAlign='center'; dctx.fillText('μ',X(mu),g.y-2);
+  // peak labels
+  dctx.fillStyle='#9aa3af'; dctx.fillText('hole-like',X(-DELTA/2),g.y+g.h+16); dctx.fillText('particle-like',X(DELTA/2),g.y+g.h+16);
+  VZ.frame(dctx,g,{xr:[Emin,Emax],yr:[0,1.05],xstep:0.5,xlabel:'Energy',ylabel:'DOS'});
+}
+function drawNq(B,ratio){
+  const W=nq.width,H=nq.height; nctx.fillStyle='#0c0e12'; nctx.fillRect(0,0,W,H);
+  const g={x:50,y:12,w:W-70,h:H-40};
+  const P=Object.assign({},P0,{ratio:ratio});
+  let amax=1; const ys=[];
+  for(let i=0;i<=240;i++){ const b=8.2+0.9*i/240; const n=FQH.point(b,0,FQH.norm(P)).N; ys.push(n); amax=Math.max(amax,Math.abs(n)); }
+  amax=Math.ceil(amax);
+  const X=b=>g.x+(b-8.2)/0.9*g.w, Y=n=>g.y+(amax-n)/(2*amax)*g.h;
+  nctx.strokeStyle='#333'; nctx.beginPath(); nctx.moveTo(g.x,Y(0)); nctx.lineTo(g.x+g.w,Y(0)); nctx.stroke();
+  nctx.strokeStyle='#4ea1ff'; nctx.lineWidth=1.8; nctx.beginPath();
+  for(let i=0;i<ys.length;i++){ const b=8.2+0.9*i/240; const x=X(b),y=Y(ys[i]); if(i===0)nctx.moveTo(x,y); else nctx.lineTo(x,y);} nctx.stroke();
+  nctx.strokeStyle='#ffd27d'; nctx.setLineDash([4,3]); nctx.beginPath(); nctx.moveTo(X(B),g.y); nctx.lineTo(X(B),g.y+g.h); nctx.stroke(); nctx.setLineDash([]);
+  VZ.frame(nctx,g,{xr:[8.2,9.1],yr:[-amax,amax],xstep:0.1,ystep:amax,xlabel:'B (T)',ylabel:'⟨N_qp⟩'});
+}
+function render(){
+  const B=parseFloat(el('s_B').value), ratio=Math.pow(10,parseFloat(el('s_T').value));
+  el('v_B').textContent=B.toFixed(3); el('v_T').textContent=ratio.toFixed(3);
+  const n=FQH.point(B,0,FQH.norm(Object.assign({},P0,{ratio:ratio}))).N;
+  const mu=muOfN(n);
+  drawDOS(B,ratio,mu); drawNq(B,ratio);
+  const central=Math.abs(n)<0.5;
+  el('o_reg').textContent=central?'constant-ν (AB)':(n>0?'constant-n (qp)':'constant-n (qh)');
+  el('o_per').textContent=central?'3Φ₀ (127 mT)':'Φ₀ (42 mT)';
+  el('o_nq').textContent=n.toFixed(2);
+  el('o_mu').textContent=mu.toFixed(2);
+}
+for(const id of ['s_B','s_T']) el(id).addEventListener('input',render);
+render();
+</script>
+</body>
+</html>

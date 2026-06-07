@@ -1,0 +1,103 @@
+/* shared/style.css — dark theme shared across the interactive visualizations */
+:root {
+  --bg:#0f1115; --panel:#181c23; --panel2:#0c0e12; --ink:#e8eaed;
+  --mut:#9aa3af; --acc:#4ea1ff; --line:#2a2f39; --line2:#38404e;
+  --good:#8f8; --warn:#ffd27d;
+}
+* { box-sizing: border-box; }
+body {
+  margin:0; background:var(--bg); color:var(--ink);
+  font-family:-apple-system,"Segoe UI",Roboto,sans-serif; line-height:1.45;
+}
+header { padding:14px 20px; border-bottom:1px solid var(--line); }
+header h1 { font-size:16px; margin:0; font-weight:600; }
+header p { font-size:12px; margin:5px 0 0; color:var(--mut); }
+header a { color:var(--acc); text-decoration:none; }
+header a:hover { text-decoration:underline; }
+
+.wrap { display:flex; gap:18px; padding:18px; flex-wrap:wrap; align-items:flex-start; }
+.plots { flex:1 1 560px; min-width:480px; }
+.controls { flex:0 0 330px; }
+
+canvas { background:#000; border-radius:6px; display:block; max-width:100%; }
+.card {
+  background:var(--panel); border:1px solid var(--line); border-radius:8px;
+  padding:14px 16px; margin-bottom:14px;
+}
+.card h2 {
+  font-size:12px; text-transform:uppercase; letter-spacing:.5px;
+  color:var(--mut); margin:0 0 10px;
+}
+.card p { font-size:13px; margin:6px 0; color:#d3d8e0; }
+
+.slider { margin:12px 0; }
+.slider label { display:flex; justify-content:space-between; font-size:13px; margin-bottom:4px; }
+.slider label b { color:var(--acc); font-variant-numeric:tabular-nums; font-weight:600; }
+.slider input[type=range] { width:100%; accent-color:var(--acc); }
+.sub { font-size:11px; color:var(--mut); margin-top:1px; }
+
+.readout { display:grid; grid-template-columns:1fr 1fr; gap:6px 14px; font-size:13px; }
+.readout div span { color:var(--mut); }
+.readout div b { float:right; font-variant-numeric:tabular-nums; }
+
+.fixed { font-size:11px; color:var(--mut); line-height:1.7; }
+.fixed code { color:#cbd3df; }
+
+button {
+  background:#222834; color:var(--ink); border:1px solid var(--line2);
+  padding:7px 12px; border-radius:6px; cursor:pointer; font-size:12px;
+}
+button:hover { border-color:var(--acc); }
+button.active { background:#1c3a5e; border-color:var(--acc); }
+
+.row { display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
+.tag {
+  display:inline-block; font-size:10px; padding:1px 6px; border-radius:10px;
+  background:#243; color:var(--good); margin-left:6px;
+}
+.eq { font-family:"Cambria Math",Georgia,serif; font-size:13px; color:#dfe4ea; }
+.toggle { display:flex; gap:0; border:1px solid var(--line2); border-radius:6px; overflow:hidden; }
+.toggle button { border:none; border-radius:0; }
+
+/* ---- slide-embed mode (see shared/embed.js) ------------------------------ */
+/* ?embed : hide page chrome so the figure can sit inside a slide iframe */
+html.embed body { background:transparent; }
+html.embed header,
+html.embed #hint,
+html.embed .hint { display:none !important; }
+html.embed .wrap { padding:10px; gap:12px; }
+/* ?embed=fig : figure only, drop the controls sidebar and let plots fill */
+html.embed-fig .controls { display:none !important; }
+html.embed-fig .plots { flex:1 1 100% !important; min-width:0 !important; }
+html.embed-fig .wrap { justify-content:center; }
+/* strip the figure's own card chrome + (Korean) titles/notes so only the
+   canvas shows; the slide supplies the title/caption */
+html.embed-fig .card { background:transparent; border:none; padding:0; margin:0; }
+html.embed-fig .card h2,
+html.embed-fig .sub,
+html.embed-fig .fixed { display:none !important; }
+/* tight figure: no body margins so the deck can measure/scale the content */
+html.embed-fig body { display:inline-block; }
+html.embed-fig .wrap { padding:0; }
+/* ?row : place the .plots canvases side-by-side (good for tall 2-canvas viz) */
+html.embed-row .plots { display:flex; flex-direction:row; gap:14px; align-items:flex-start; flex-wrap:nowrap; }
+html.embed-row .plots .card { margin:0; }
+
+/* gallery (index.html) */
+.gallery { max-width:1100px; margin:0 auto; padding:8px 20px 40px; }
+.group { margin-top:26px; }
+.group h2 { font-size:14px; color:var(--acc); border-bottom:1px solid var(--line); padding-bottom:6px; }
+.grid {
+  display:grid; grid-template-columns:repeat(auto-fill,minmax(250px,1fr));
+  gap:14px; margin-top:14px;
+}
+.tile {
+  display:block; background:var(--panel); border:1px solid var(--line);
+  border-radius:10px; padding:14px 16px; text-decoration:none; color:var(--ink);
+  transition:border-color .15s, transform .15s;
+}
+.tile:hover { border-color:var(--acc); transform:translateY(-2px); }
+.tile .id { font-size:11px; color:var(--mut); font-variant-numeric:tabular-nums; }
+.tile h3 { font-size:14px; margin:4px 0 6px; }
+.tile p { font-size:12px; color:var(--mut); margin:0; }
+.tile .done { color:var(--good); }

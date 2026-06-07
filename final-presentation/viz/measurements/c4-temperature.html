@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>C4 · 온도 감쇠 T₀ & topological dephasing</title>
+<link rel="stylesheet" href="../shared/style.css">
+<script src="../shared/embed.js"></script>
+</head>
+<body>
+<header>
+  <h1>C4 · 진동 진폭의 온도 감쇠 ln(δG) ∝ −T/T₀</h1>
+  <p>Fig 4 · 중심 영역 T₀≈94 mK 인데 고/저 field는 ≈31–32 mK 로 ~3배 억제. edge velocity로는 76–85 mK 가 예측되므로, 추가 dephasing(둘러싼 quasiparticle 수의 thermal smearing = topological dephasing[69])이 필요하다. · <a href="../index.html">← 갤러리</a></p>
+</header>
+
+<div class="wrap">
+  <div class="plots">
+    <div class="card">
+      <h2>ln(δG) (a.u.) vs T (mK)</h2>
+      <canvas id="cv" width="760" height="420"></canvas>
+    </div>
+  </div>
+  <div class="controls">
+    <div class="card">
+      <h2>모델</h2>
+      <div style="margin:6px 0 12px">
+        <div class="sub" style="margin-bottom:6px">고/저 field 영역 dephasing</div>
+        <div class="toggle" id="dep">
+          <button data-on="1" class="active">topological ON (관측)</button>
+          <button data-on="0">edge만 (예측)</button>
+        </div>
+      </div>
+      <div class="slider">
+        <label>중심 T₀ <b id="v_c">94</b> mK</label>
+        <input id="s_c" type="range" min="60" max="120" step="1" value="94">
+      </div>
+      <div class="slider">
+        <label>저 field T₀ <b id="v_l">31</b> mK</label>
+        <input id="s_l" type="range" min="20" max="90" step="1" value="31">
+      </div>
+      <div class="slider">
+        <label>고 field T₀ <b id="v_h">32</b> mK</label>
+        <input id="s_h" type="range" min="20" max="90" step="1" value="32">
+      </div>
+    </div>
+    <div class="card">
+      <h2>T₀ 비교</h2>
+      <div class="readout">
+        <div><span>중심 8.85T</span><b id="o_c">94 / 89</b></div>
+        <div><span>저 8.4T</span><b id="o_l">31 / 76</b></div>
+        <div><span>고 9.3T</span><b id="o_h">32 / 85</b></div>
+      </div>
+      <div class="sub" style="margin-top:8px">관측 / edge예측. 중심은 일치(edge smearing), 고/저는 관측 ≪ 예측 → 추가 dephasing.</div>
+    </div>
+  </div>
+</div>
+
+<script src="../shared/render.js"></script>
+<script>
+"use strict";
+const el=id=>document.getElementById(id);
+const cv=document.getElementById('cv'), ctx=cv.getContext('2d');
+const EDGE={c:89,l:76,h:85};       // edge-velocity predicted T0
+// deterministic scatter offsets for synthetic data points
+const JIT=[0.06,-0.05,0.08,-0.09,0.04,-0.07,0.10,-0.03,0.05,-0.08,0.07,-0.04];
+let topo=1;
+function lines(){
+  return [
+    {key:'c',Tmeas:+el('s_c').value,col:'#222', name:'8.85T central',Tdraw:+el('s_c').value},
+    {key:'l',Tmeas:+el('s_l').value,col:'#4ea1ff',name:'8.4T low',Tdraw: topo? +el('s_l').value : EDGE.l},
+    {key:'h',Tmeas:+el('s_h').value,col:'#ff5a5a',name:'9.3T high',Tdraw: topo? +el('s_h').value : EDGE.h}
+  ];
+}
+function draw(){
+  const W=cv.width,H=cv.height; ctx.fillStyle='#fff'; ctx.fillRect(0,0,W,H);
+  const g={x:60,y:24,w:W-90,h:H-70};
+  const Tmax=120, Lmin=-4, Lmax=0.3;
+  const X=t=>g.x+t/Tmax*g.w, Y=l=>g.y+(Lmax-l)/(Lmax-Lmin)*g.h;
+  // grid
+  ctx.strokeStyle='#e3e3e3'; ctx.lineWidth=1;
+  for(let t=0;t<=Tmax;t+=20){ ctx.beginPath(); ctx.moveTo(X(t),g.y); ctx.lineTo(X(t),g.y+g.h); ctx.stroke(); }
+  for(let l=Lmin;l<=0.1;l+=1){ ctx.beginPath(); ctx.moveTo(g.x,Y(l)); ctx.lineTo(g.x+g.w,Y(l)); ctx.stroke(); }
+  const LS=lines();
+  LS.forEach((s,si)=>{
+    // line ln(dG) = -T/T0
+    ctx.strokeStyle=s.col; ctx.setLineDash([7,5]); ctx.lineWidth=1.6; ctx.beginPath();
+    ctx.moveTo(X(0),Y(0)); ctx.lineTo(X(Tmax),Y(-Tmax/s.Tdraw)); ctx.stroke(); ctx.setLineDash([]);
+    // synthetic points along it with scatter
+    ctx.fillStyle=s.col;
+    for(let k=0;k<12;k++){ const t=10+k*9; if(t>Tmax)break; const l=-t/s.Tdraw + JIT[(k+si*4)%JIT.length];
+      const x=X(t),y=Y(l); ctx.save();
+      ctx.translate(x,y);
+      if(si===0){ ctx.strokeStyle=s.col; ctx.strokeRect(-3.5,-3.5,7,7); }      // squares
+      else if(si===1){ ctx.beginPath(); ctx.moveTo(0,-4);ctx.lineTo(4,3);ctx.lineTo(-4,3);ctx.closePath(); ctx.strokeStyle=s.col; ctx.stroke(); } // triangles
+      else { ctx.beginPath(); ctx.arc(0,0,3.5,0,2*Math.PI); ctx.strokeStyle=s.col; ctx.stroke(); } // circles
+      ctx.restore();
+    }
+    // label
+    ctx.fillStyle=s.col; ctx.font='12px sans-serif'; ctx.textAlign='left';
+    ctx.fillText(s.name+'  T₀='+Math.round(s.Tdraw)+'mK', X(Tmax)-150, Y(-Tmax/s.Tdraw)-8);
+  });
+  // axes
+  ctx.strokeStyle='#222'; ctx.lineWidth=1.2; ctx.strokeRect(g.x,g.y,g.w,g.h);
+  ctx.fillStyle='#222'; ctx.font='12px sans-serif'; ctx.textAlign='center'; ctx.textBaseline='top';
+  for(let t=0;t<=Tmax;t+=20){ ctx.fillText(t,X(t),g.y+g.h+6); }
+  ctx.textAlign='right'; ctx.textBaseline='middle';
+  for(let l=Lmin;l<=0.1;l+=1){ ctx.fillText(l.toFixed(0),g.x-6,Y(l)); }
+  ctx.textAlign='center'; ctx.fillText('T (mK)', g.x+g.w/2, g.y+g.h+24);
+  ctx.save(); ctx.translate(g.x-36,g.y+g.h/2); ctx.rotate(-Math.PI/2); ctx.fillText('ln(δG) (a.u.)',0,0); ctx.restore();
+  // readouts (observed / edge-predicted; edge values from the EDGE table, not hardcoded)
+  el('o_c').textContent=Math.round(LS[0].Tmeas)+' / '+EDGE.c;
+  el('o_l').textContent=Math.round(+el('s_l').value)+' / '+EDGE.l;
+  el('o_h').textContent=Math.round(+el('s_h').value)+' / '+EDGE.h;
+}
+['s_c','s_l','s_h'].forEach(id=>el(id).addEventListener('input',()=>{
+  el('v_c').textContent=el('s_c').value; el('v_l').textContent=el('s_l').value; el('v_h').textContent=el('s_h').value; draw();
+}));
+document.querySelectorAll('#dep button').forEach(b=>b.addEventListener('click',()=>{
+  document.querySelectorAll('#dep button').forEach(x=>x.classList.remove('active')); b.classList.add('active');
+  topo=parseInt(b.dataset.on); draw();
+}));
+draw();
+</script>
+</body>
+</html>

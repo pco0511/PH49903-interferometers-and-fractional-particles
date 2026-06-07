@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>P · 측정 vs 시뮬 오버레이 (wipe / blend / diff)</title>
+<link rel="stylesheet" href="../shared/style.css">
+</head>
+<body>
+<header>
+  <h1>P · 측정 ↔ 시뮬 오버레이 — wipe · blend · 차이맵</h1>
+  <p>[프로토타입] 측정과 모델을 같은 축에 겹쳐 본다. <b>wipe</b>: 경계선 좌=측정/우=모델. <b>blend</b>: 투명도 혼합. <b>diff</b>: 모델−측정 차이맵(둘 다 [-1,1] 정규화). · <a href="../index.html">← 통합 갤러리</a></p>
+</header>
+
+<div class="wrap">
+  <div class="plots">
+    <div class="card">
+      <div class="row" style="justify-content:space-between">
+        <div class="toggle"><button data-src="fig2" class="active">Fig 2</button><button data-src="fig3b">Fig 3b</button></div>
+        <div class="toggle"><button data-mode="wipe" class="active">wipe</button><button data-mode="blend">blend</button><button data-mode="diff">diff</button></div>
+      </div>
+      <canvas id="cmp" width="900" height="440"></canvas>
+      <p class="sub" id="cap">–</p>
+    </div>
+  </div>
+  <div class="controls">
+    <div class="card">
+      <h2>오버레이 제어</h2>
+      <div class="slider" id="wrap_wipe"><label>wipe 경계 <b id="v_w">50</b> %</label>
+        <input id="s_w" type="range" min="0" max="100" step="1" value="50"></div>
+      <div class="slider" id="wrap_blend" style="display:none"><label>blend (모델 불투명도) <b id="v_a">50</b> %</label>
+        <input id="s_a" type="range" min="0" max="100" step="1" value="50"></div>
+    </div>
+    <div class="card">
+      <h2>모델 geometry</h2>
+      <div class="slider"><label>A₀ <b id="v_A0">0.259</b> μm²</label>
+        <input id="s_A0" type="range" min="0.05" max="0.45" step="0.001" value="0.259"></div>
+      <div class="slider"><label>∂A/∂V_g <b id="v_dad">0.194</b> μm²/V</label>
+        <input id="s_dad" type="range" min="0.04" max="0.30" step="0.001" value="0.194"></div>
+      <div class="slider"><label>B_center <b id="v_Bc">8.870</b> T</label>
+        <input id="s_Bc" type="range" min="8.5" max="9.2" step="0.002" value="8.870"></div>
+      <div class="slider"><label>온도 kT/E_c <b id="v_T">0.020</b></label>
+        <input id="s_T" type="range" min="-3.1" max="-0.7" step="0.01" value="-1.699"></div>
+      <button id="reset">프리셋으로 리셋</button>
+    </div>
+    <div class="card">
+      <h2>도출량</h2>
+      <div class="readout">
+        <div><span>모델 B-주기</span><b id="o_bp">–</b></div>
+        <div><span>모델 AB 기울기</span><b id="o_sl">–</b></div>
+        <div><span>차이 RMS</span><b id="o_rms">–</b></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="data/measured.js"></script>
+<script src="../shared/physics.js"></script>
+<script src="../shared/render.js"></script>
+<script>
+"use strict";
+const el=id=>document.getElementById(id);
+const cv=el('cmp'), ctx=cv.getContext('2d');
+let SRC='fig2', MODE='wipe';
+const PRESET={fig2:{A0:0.259,dad:0.194,Bc:8.870},fig3b:{A0:0.259,dad:0.194,Bc:9.039}};
+const BOX={x:54,y:14,w:740,h:400};
+function curP(){
+  return {A0:parseFloat(el('s_A0').value)*1e-12, dad:parseFloat(el('s_dad').value)*1e-12,
+          dqe:1.07, Bc:parseFloat(el('s_Bc').value), ab:0.100,
+          ratio:Math.pow(10,parseFloat(el('s_T').value))};
+}
+function axes(c,box,ext,xstep,ystep){
+  const x0=ext[0],x1=ext[1],y0=ext[2],y1=ext[3];
+  const X=B=>box.x+(B-x0)/(x1-x0)*box.w, Y=V=>box.y+(y1-V)/(y1-y0)*box.h;
+  c.strokeStyle='#888'; c.lineWidth=1; c.strokeRect(box.x,box.y,box.w,box.h);
+  c.fillStyle='#cbd3df'; c.font='11px sans-serif';
+  c.textAlign='center'; c.textBaseline='top';
+  for(let v=Math.ceil(x0/xstep)*xstep; v<=x1+1e-9; v+=xstep){ const x=X(v);
+    c.beginPath(); c.moveTo(x,box.y+box.h); c.lineTo(x,box.y+box.h+4); c.stroke(); c.fillText(v.toFixed(2),x,box.y+box.h+6); }
+  c.textAlign='right'; c.textBaseline='middle';
+  for(let v=Math.ceil(y0/ystep)*ystep; v<=y1+1e-9; v+=ystep){ const y=Y(v);
+    c.beginPath(); c.moveTo(box.x-4,y); c.lineTo(box.x,y); c.stroke(); c.fillText(v.toFixed(0),box.x-6,y); }
+  c.textAlign='center'; c.textBaseline='bottom'; c.fillText('B (T)',box.x+box.w/2,box.y+box.h+26);
+  c.save(); c.translate(box.x-34,box.y+box.h/2); c.rotate(-Math.PI/2); c.textAlign='center'; c.fillText('δV_g (mV)',0,0); c.restore();
+  return {X,Y};
+}
+function render(){
+  const m=window.MEASURED[SRC], ext=m.extent, P=curP();
+  el('v_A0').textContent=(P.A0*1e12).toFixed(3); el('v_dad').textContent=(P.dad*1e12).toFixed(3);
+  el('v_Bc').textContent=P.Bc.toFixed(3); el('v_T').textContent=P.ratio.toFixed(3);
+  el('v_w').textContent=el('s_w').value; el('v_a').textContent=el('s_a').value;
+  const win={bmin:ext[0],bmax:ext[1],vtop:ext[3],vbot:ext[2]};
+  // measured buffer
+  const measHM=VZ.makeHeatmap(m.nx,m.ny); VZ.paintHeatmap(measHM,new Float32Array(m.dG),1,'div');
+  ctx.fillStyle='#0c0e12'; ctx.fillRect(0,0,cv.width,cv.height);
+  ctx.imageSmoothingEnabled=true;
+  const span=ext[1]-ext[0], xstep=span>0.5?0.2:0.1;
+  let rms=null;
+  if(MODE==='diff'){
+    const gm=FQH.grid(P,m.nx,m.ny,win); const diff=new Float32Array(m.nx*m.ny); let vmax=1e-9,s=0;
+    for(let i=0;i<diff.length;i++){ const sn=gm.dG[i]/gm.vmax; const dd=sn-m.dG[i]; diff[i]=dd; const a=Math.abs(dd); if(a>vmax)vmax=a; s+=dd*dd; }
+    rms=Math.sqrt(s/diff.length);
+    const dHM=VZ.makeHeatmap(m.nx,m.ny); VZ.paintHeatmap(dHM,diff,vmax,'div');
+    ctx.drawImage(dHM.buf,BOX.x,BOX.y,BOX.w,BOX.h);
+    VZ.colorbar(ctx,BOX.x+BOX.w+18,BOX.y,14,BOX.h,(-vmax).toFixed(2),vmax.toFixed(2),'모델−측정');
+  } else if(MODE==='blend'){
+    const gDisp=FQH.grid(P,300,200,win), simHM=VZ.makeHeatmap(300,200); VZ.paintHeatmap(simHM,gDisp.dG,gDisp.vmax,'div');
+    ctx.drawImage(measHM.buf,BOX.x,BOX.y,BOX.w,BOX.h);
+    ctx.globalAlpha=parseFloat(el('s_a').value)/100; ctx.drawImage(simHM.buf,BOX.x,BOX.y,BOX.w,BOX.h); ctx.globalAlpha=1;
+    VZ.colorbar(ctx,BOX.x+BOX.w+18,BOX.y,14,BOX.h,'-','+','δG');
+  } else { // wipe
+    const gDisp=FQH.grid(P,300,200,win), simHM=VZ.makeHeatmap(300,200); VZ.paintHeatmap(simHM,gDisp.dG,gDisp.vmax,'div');
+    const wx=BOX.x+BOX.w*parseFloat(el('s_w').value)/100;
+    ctx.drawImage(measHM.buf,BOX.x,BOX.y,BOX.w,BOX.h);
+    ctx.save(); ctx.beginPath(); ctx.rect(wx,BOX.y,BOX.x+BOX.w-wx,BOX.h); ctx.clip();
+    ctx.drawImage(simHM.buf,BOX.x,BOX.y,BOX.w,BOX.h); ctx.restore();
+    ctx.strokeStyle='#fff'; ctx.lineWidth=1.5; ctx.beginPath(); ctx.moveTo(wx,BOX.y); ctx.lineTo(wx,BOX.y+BOX.h); ctx.stroke();
+    ctx.fillStyle='#fff'; ctx.font='12px sans-serif'; ctx.textAlign='left';
+    ctx.fillText('◀ 측정',BOX.x+6,BOX.y+16); ctx.textAlign='right'; ctx.fillText('모델 ▶',BOX.x+BOX.w-6,BOX.y+16);
+    VZ.colorbar(ctx,BOX.x+BOX.w+18,BOX.y,14,BOX.h,'-','+','δG');
+  }
+  axes(ctx,BOX,ext,xstep,5);
+  const d=FQH.derived(P);
+  el('o_bp').textContent=d.Bper.toFixed(0)+' mT'; el('o_sl').textContent=d.slope.toFixed(0)+' mV/T';
+  el('o_rms').textContent=rms!==null?rms.toFixed(3):'(diff 모드)';
+  el('cap').textContent={wipe:'경계선 왼쪽=측정, 오른쪽=모델. 줄무늬가 경계에서 이어지면 일치.',
+    blend:'모델 불투명도를 올리며 측정 위에 겹친다.',
+    diff:'모델−측정 차이(둘 다 ±1로 진폭 정규화 후). 0(가운데색)이 많을수록 형상·위상 일치. RMS는 절대 δG 오차가 아니라 형상 잔차.'}[MODE];
+}
+function applyPreset(){ const p=PRESET[SRC]; el('s_A0').value=p.A0; el('s_dad').value=p.dad; el('s_Bc').value=p.Bc; render(); }
+document.querySelectorAll('button[data-src]').forEach(b=>b.addEventListener('click',()=>{
+  document.querySelectorAll('button[data-src]').forEach(x=>x.classList.remove('active')); b.classList.add('active'); SRC=b.dataset.src; applyPreset(); }));
+document.querySelectorAll('button[data-mode]').forEach(b=>b.addEventListener('click',()=>{
+  document.querySelectorAll('button[data-mode]').forEach(x=>x.classList.remove('active')); b.classList.add('active'); MODE=b.dataset.mode;
+  el('wrap_wipe').style.display=MODE==='wipe'?'':'none'; el('wrap_blend').style.display=MODE==='blend'?'':'none'; render(); }));
+for(const id of ['s_w','s_a','s_A0','s_dad','s_Bc','s_T']) el(id).addEventListener('input',render);
+el('reset').addEventListener('click',applyPreset);
+render();
+</script>
+</body>
+</html>

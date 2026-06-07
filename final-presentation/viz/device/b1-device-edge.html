@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>B1 · 소자 구조 · chiral edge · QPC backscattering</title>
+<link rel="stylesheet" href="../shared/style.css">
+<script src="../shared/embed.js"></script>
+</head>
+<body>
+<header>
+  <h1>B1 · Fabry–Pérot 간섭계: chiral edge & QPC backscattering</h1>
+  <p>Fig 1b (실제 소자, svg/device_design.svg 기반) · 위·아래에서 들어온 metal gate(노랑)가 2DES(파랑)를 deplete해 chamber를 만들고, 좌·우 두 QPC가 좌상단 I_source에서 주입된 chiral edge(빨강)를 backscatter한다. 자기장 B는 2DES에 수직(지면 밖, ⊙). 두 backscatter 경로가 내부 localize quasiparticle(빨간 vortex)을 둘러싸 θ<sub>anyon</sub>에 민감해진다. · <a href="../index.html">← 갤러리</a></p>
+</header>
+
+<div class="wrap">
+  <div class="plots">
+    <div class="card">
+      <h2>모식도 (전류 흐름 애니메이션)</h2>
+      <canvas id="cv" width="760" height="540"></canvas>
+    </div>
+  </div>
+  <div class="controls">
+    <div class="card">
+      <h2>제어</h2>
+      <div class="slider">
+        <label>QPC 투과율 T <b id="v_T">0.90</b></label>
+        <input id="s_T" type="range" min="0.5" max="0.99" step="0.01" value="0.90">
+        <div class="sub">backscatter 확률 = 1−T (QPC 반사 화살표 세기)</div>
+      </div>
+      <div class="slider">
+        <label>side gate δV_g <b id="v_V">0</b> mV</label>
+        <input id="s_V" type="range" min="-30" max="0" step="0.5" value="0">
+        <div class="sub">더 음↦ depletion↑ ↦ 면적 A_I 수축 (그림은 효과 과장)</div>
+      </div>
+      <div class="slider">
+        <label>내부 quasiparticle 수 N <b id="v_N">2</b></label>
+        <input id="s_N" type="range" min="0" max="5" step="1" value="2">
+        <div class="sub">둘러싸인 vortex 수 → 위상 N·θ_anyon</div>
+      </div>
+      <div class="row"><button id="play">⏸ 흐름 정지</button></div>
+    </div>
+    <div class="card">
+      <h2>도출량</h2>
+      <div class="readout">
+        <div><span>면적 A_I</span><b id="o_A">–</b></div>
+        <div><span>둘레 L≈4√A</span><b id="o_L">–</b></div>
+        <div><span>backscatter</span><b id="o_R">–</b></div>
+        <div><span>l_B (ν=1/3)</span><b>≈9 nm</b></div>
+      </div>
+      <div class="sub" style="margin-top:8px">리소 면적 1.0×1.0 μm², lateral depletion ~200 nm/side → A_I≈0.38 μm². weak backscattering(T≈90%). ∂A/∂V_g≈0.167 μm²/V (실제 변화는 작음). l_B ≪ 소자 → 둘러싼 qp와 잘 분리.</div>
+    </div>
+  </div>
+</div>
+
+<script>
+"use strict";
+const el=id=>document.getElementById(id);
+const cv=document.getElementById('cv'), ctx=cv.getContext('2d');
+let T=0.90, V=0, N=2, playing=true, phase=0;
+
+// ---- device geometry copied from svg/device_design.svg (raw coords) ----------
+const RX0=918, RY0=1289, RW=1412, RH=951;                  // mesa bounding box
+const GATES=[
+ "M1183.01 1820 1245.99 1820C1265.33 1820 1281 1835.67 1281 1855.01L1281 2237 1148 2237 1148 1855.01C1148 1835.67 1163.67 1820 1183.01 1820Z",
+ "M2012.74 1820 2075.26 1820C2094.44 1820 2110 1835.56 2110 1854.74L2110 2237 1978 2237 1978 1854.74C1978 1835.56 1993.56 1820 2012.74 1820Z",
+ "M1343.38 2146C1323.29 2146 1307 2129.71 1307 2109.62L1307 2050.38C1307 2030.29 1323.29 2014 1343.38 2014L1913.62 2014C1933.71 2014 1950 2030.29 1950 2050.38L1950 2109.62C1950 2129.71 1933.71 2146 1913.62 2146Z",
+ "M1540 2146L1719 2146L1719 2238L1540 2238Z",
+ "M2075.26 1707 2012.74 1707C1993.56 1707 1978 1691.44 1978 1672.26L1978 1290 2110 1290 2110 1672.26C2110 1691.44 2094.44 1707 2075.26 1707Z",
+ "M1245.99 1707 1183.01 1707C1163.67 1707 1148 1691.33 1148 1671.99L1148 1290 1281 1290 1281 1671.99C1281 1691.33 1265.33 1707 1245.99 1707Z",
+ "M1915.62 1382C1935.71 1382 1952 1398.29 1952 1418.38L1952 1477.62C1952 1497.71 1935.71 1514 1915.62 1514L1345.38 1514C1325.29 1514 1309 1497.71 1309 1477.62L1309 1418.38C1309 1398.29 1325.29 1382 1345.38 1382Z",
+ "M1539 1289L1719 1289L1719 1382L1539 1382Z"
+].map(d=>new Path2D(d));
+const EDGE=new Path2D("M925.5 1304.56 1092.14 1304.72C1119.28 1304.07 1139.47 1311.39 1138.46 1344.91 1137.45 1378.42 1129.13 1596.85 1136.17 1659.34 1143.21 1721.84 1161.73 1717.96 1180.69 1719.87 1199.65 1721.78 1241.91 1722.41 1258.77 1721.02 1275.63 1719.62 1287.44 1702.81 1293.64 1676.07 1299.83 1649.34 1294.89 1586.46 1295.93 1560.6 1296.97 1534.74 1304.66 1527.85 1335.21 1526.81 1365.77 1525.77 1881.8 1526.21 1915.98 1526.65 1950.17 1527.09 1963.53 1541.6 1961.65 1567.82 1959.77 1594.03 1962.2 1645.54 1963.62 1672.14 1965.03 1698.74 1987.3 1712.95 2008.47 1721.51 2029.64 1730.07 2070.7 1725.45 2090.64 1723.48 2110.58 1721.51 2119.97 1723.53 2125.18 1662.46 2130.39 1601.39 2121.79 1385.92 2121.9 1357.05 2122.01 1328.18 2146.46 1307.4 2172.97 1306.2 2199.49 1305 2271.68 1304.28 2336.5 1304.56");
+const DASH1=new Path2D("M1148.68 1708.5C1163.22 1724.91 1169.2 1732.43 1170.7 1744.48 1172.2 1756.52 1174.23 1764.21 1169.85 1774.89 1165.48 1785.57 1155.31 1794.87 1144.45 1808.58 1133.58 1822.28 1120.06 1842.15 1119.89 1874.8 1119.72 1907.45 1115.6 2119.35 1115.99 2151.64 1116.39 2183.94 1105.89 2200.4 1085.67 2201.03 1065.46 2201.66 968.748 2201.63 918.5 2202.5");
+const DASH2=new Path2D("M1985.29 1707.5C2004.54 1721.42 2011.8 1731.17 2012.98 1748.29 2014.16 1765.41 2018.44 1774.89 2012.15 1786.63 2005.86 1798.37 1983.67 1805.88 1975.24 1818.74 1966.8 1831.6 1960.49 1840.77 1961.56 1863.79 1962.63 1886.81 1961.86 1941.28 1961.89 1964.71 1961.91 1988.13 1949.2 2000.99 1920.19 2001.4 1891.19 2001.81 1365.07 1998.21 1333.98 1999.6 1302.88 2000.99 1298.95 1981.96 1291.62 1959.63 1284.29 1937.29 1289.64 1892.51 1289.97 1865.59 1290.3 1838.67 1266.16 1813.36 1246.13 1812.84 1226.11 1812.32 1207.16 1810.98 1175.76 1812.35 1144.37 1813.71 1133.49 1837.19 1134.89 1877.06 1136.29 1916.92 1127.5 2155.07 1127.8 2181.28 1128.11 2207.5 1113.74 2223.39 1092.21 2223.06 1070.67 2222.73 943.578 2224.4 918.5 2226.5");
+
+// chamber interior (raw) where localized quasiparticles sit
+const CL=1300, CR=1958, CT=1520, CB=2008;
+
+// ---- layout & transform ------------------------------------------------------
+let SC, OX, OY;
+function layout(){
+  const padL=96, padR=24, padT=84, padB=20;
+  SC=Math.min((cv.width-padL-padR)/RW, (cv.height-padT-padB)/RH);
+  OX=padL; OY=padT;
+}
+function sx(rx){ return OX+(rx-RX0)*SC; }
+function sy(ry){ return OY+(ry-RY0)*SC; }
+function withTf(fn){ ctx.save(); ctx.translate(OX,OY); ctx.scale(SC,SC); ctx.translate(-RX0,-RY0); fn(); ctx.restore(); }
+function strokeP(p,col,wpx,dash,off){
+  withTf(()=>{ ctx.strokeStyle=col; ctx.lineWidth=wpx/SC; ctx.lineJoin='round'; ctx.lineCap='round';
+    if(dash){ ctx.setLineDash(dash.map(d=>d/SC)); ctx.lineDashOffset=(off||0)/SC; } else ctx.setLineDash([]);
+    ctx.stroke(p); });
+}
+function fillP(p,col){ withTf(()=>{ ctx.fillStyle=col; ctx.fill(p); }); }
+
+function spiral(x,y,r){ ctx.strokeStyle='#ff5a5a'; ctx.lineWidth=2; ctx.beginPath();
+  for(let t=0;t<=4*Math.PI;t+=0.25){ const rr=r*t/(4*Math.PI); const px=x+rr*Math.cos(t),py=y+rr*Math.sin(t); if(t===0)ctx.moveTo(px,py); else ctx.lineTo(px,py);} ctx.stroke();
+  ctx.fillStyle='#ff5a5a'; ctx.beginPath(); ctx.arc(x,y,2,0,2*Math.PI); ctx.fill(); }
+
+function refl(cxr,cyr,strength){           // QPC backscatter (reflection) indicator, raw coords
+  const x=sx(cxr), y=sy(cyr), r=16;
+  ctx.globalAlpha=Math.min(1,0.2+strength*2.6); ctx.strokeStyle='#ffd27d'; ctx.lineWidth=2.4;
+  ctx.beginPath(); ctx.arc(x,y,r,-2.2,2.0); ctx.stroke();
+  const a=2.0; ctx.fillStyle='#ffd27d';
+  ctx.beginPath(); ctx.moveTo(x+r*Math.cos(a),y+r*Math.sin(a));
+  ctx.lineTo(x+r*Math.cos(a)-9*Math.cos(a-1.2),y+r*Math.sin(a)-9*Math.sin(a-1.2));
+  ctx.lineTo(x+r*Math.cos(a)-9*Math.cos(a+0.2),y+r*Math.sin(a)-9*Math.sin(a+0.2)); ctx.closePath(); ctx.fill();
+  ctx.globalAlpha=1;
+}
+
+// out-of-plane field symbol (circle + centre dot). fieldDot: raw coords; fieldDot2: screen coords.
+function fieldDot(rx,ry,r,al){ const x=sx(rx),y=sy(ry); ctx.save(); ctx.globalAlpha=al;
+  ctx.strokeStyle='#7fd1ff'; ctx.fillStyle='#7fd1ff'; ctx.lineWidth=1.4;
+  ctx.beginPath(); ctx.arc(x,y,r,0,2*Math.PI); ctx.stroke(); ctx.beginPath(); ctx.arc(x,y,r*0.22,0,2*Math.PI); ctx.fill(); ctx.restore(); }
+function fieldDot2(x,y,r){ ctx.strokeStyle='#7fd1ff'; ctx.fillStyle='#7fd1ff'; ctx.lineWidth=1.6;
+  ctx.beginPath(); ctx.arc(x,y,r,0,2*Math.PI); ctx.stroke(); ctx.beginPath(); ctx.arc(x,y,r*0.22,0,2*Math.PI); ctx.fill(); }
+
+function draw(){
+  layout();
+  const W=cv.width,H=cv.height; ctx.fillStyle='#0b0d12'; ctx.fillRect(0,0,W,H);
+  // mesa (2DES)
+  ctx.fillStyle='#1e2a55'; ctx.fillRect(sx(RX0),sy(RY0),RW*SC,RH*SC);
+  ctx.strokeStyle='#3a4a80'; ctx.lineWidth=1; ctx.strokeRect(sx(RX0),sy(RY0),RW*SC,RH*SC);
+
+  // metal gates (yellow)
+  for(const g of GATES){ fillP(g,'#c9c08a'); strokeP(g,'#8d855a',1); }
+
+  // depletion inset (effective edge) + enclosed area, shrinks with -V (exaggerated)
+  const dep=-V;                               // raw px inset (V in [-30,0] -> 0..30)
+  const il=CL+dep, ir=CR-dep, it=CT+dep, ib=CB-dep;
+  ctx.fillStyle='rgba(120,200,255,.10)'; ctx.fillRect(sx(il),sy(it),(ir-il)*SC,(ib-it)*SC);
+  ctx.strokeStyle='rgba(120,200,255,.5)'; ctx.setLineDash([5,4]); ctx.lineWidth=1.2;
+  ctx.strokeRect(sx(il),sy(it),(ir-il)*SC,(ib-it)*SC); ctx.setLineDash([]);
+
+  // inner / return edges (always present, faint, slow flow)
+  strokeP(DASH1,'rgba(255,120,120,.55)',2,[24,16],-phase*0.5);
+  strokeP(DASH2,'rgba(255,150,120,.55)',2,[12,12],-phase*0.5);
+
+  // main chiral edge (enters top-left at I_source, exits top-right), animated flow
+  strokeP(EDGE,'#ff5a5a',2.6,[16,11],-phase*1.6);
+
+  // QPC backscatter reflections (left=QPC1, right=QPC2), strength = 1-T
+  refl(1215,1763,1-T); refl(2044,1763,1-T);
+
+  // localized quasiparticles inside the (shrunken) chamber
+  const cx=(il+ir)/2, cy=(it+ib)/2;
+  for(let k=0;k<N;k++){ const col=k%3, row=Math.floor(k/3);
+    spiral(sx(cx+(col-1)*((ir-il)*0.22)), sy(cy-12+row*30), 8); }
+
+  // magnetic field B: perpendicular to the 2DES, pointing out of the page (quantum Hall).
+  // out-of-plane symbol = circle with a centre dot. Faint copies over the open 2DES corners.
+  for(const c of [[1010,1380],[2235,1380],[1010,2120],[2235,2120]]) fieldDot(c[0],c[1],8,0.5);
+
+  // source (AC); the bottom-left contact is the grounded return (no "drain" label)
+  ctx.strokeStyle='#cbd3df'; ctx.lineWidth=1.6;
+  const sxs=44, sys=sy(1305); ctx.beginPath(); ctx.arc(sxs,sys,13,0,2*Math.PI); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(sxs-7,sys); ctx.bezierCurveTo(sxs-3,sys-7,sxs+3,sys+7,sxs+7,sys); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(sxs+13,sys); ctx.lineTo(sx(925),sys); ctx.stroke();
+  const dxs=44, dys=sy(2202); ctx.beginPath(); ctx.moveTo(sx(918),dys); ctx.lineTo(dxs,dys); ctx.stroke();
+  for(let i=0;i<3;i++){ ctx.beginPath(); ctx.moveTo(dxs-9+i*3,dys+4+i*4); ctx.lineTo(dxs+9-i*3,dys+4+i*4); ctx.stroke(); }
+  ctx.beginPath(); ctx.moveTo(dxs,dys);ctx.lineTo(dxs,dys+4); ctx.stroke();
+
+  // labels
+  ctx.fillStyle='#cbd3df'; ctx.font='12px sans-serif'; ctx.textAlign='center';
+  ctx.fillText('QPC 1', sx(1215), sy(1640)); ctx.fillText('QPC 2', sx(2044), sy(1640));
+  ctx.textAlign='left'; ctx.fillText('I_source', 26, sys-20);
+  ctx.fillStyle='#9aa3af'; ctx.textAlign='center'; ctx.fillText('interferometer chamber (2DES)', sx((CL+CR)/2), sy(CB)+16);
+  // legend
+  ctx.textAlign='left'; ctx.font='11px sans-serif';
+  ctx.fillStyle='#c9c08a'; ctx.fillRect(sx(RX0),20,12,12); ctx.fillStyle='#9aa3af'; ctx.fillText('metal gate', sx(RX0)+16,30);
+  ctx.fillStyle='#1e2a55'; ctx.fillRect(sx(RX0)+100,20,12,12); ctx.strokeStyle='#3a4a80'; ctx.strokeRect(sx(RX0)+100,20,12,12); ctx.fillStyle='#9aa3af'; ctx.fillText('2DES', sx(RX0)+116,30);
+  ctx.strokeStyle='#ff5a5a'; ctx.lineWidth=2.4; ctx.beginPath(); ctx.moveTo(sx(RX0)+170,26); ctx.lineTo(sx(RX0)+195,26); ctx.stroke(); ctx.fillStyle='#9aa3af'; ctx.fillText('chiral edge', sx(RX0)+200,30);
+  ctx.fillStyle='#ffd27d'; ctx.fillText('⤿ backscatter', sx(RX0)+285,30);
+  // magnetic-field key (top-right)
+  const bX=cv.width-184;
+  fieldDot2(bX,26,8); fieldDot2(bX+22,26,8);
+  ctx.fillStyle='#7fd1ff'; ctx.font='bold 13px sans-serif'; ctx.textAlign='left'; ctx.fillText('B', bX+40,30);
+  ctx.fillStyle='#9aa3af'; ctx.font='10px sans-serif'; ctx.fillText('⊥ 2DES · out of page (≈8.65 T)', bX-6,46);
+
+  // readouts (A_I tracks the visual inset; nominal 0.38 um^2 at V=0)
+  const af=((ir-il)*(ib-it))/((CR-CL)*(CB-CT));
+  const A=0.38*af; el('o_A').textContent=A.toFixed(3)+' μm²';
+  el('o_L').textContent=(4*Math.sqrt(A)).toFixed(2)+' μm';
+  el('o_R').textContent=((1-T)*100).toFixed(0)+' %';
+}
+function loop(){ if(playing)phase+=1.4; draw(); requestAnimationFrame(loop); }
+el('s_T').addEventListener('input',e=>{T=parseFloat(e.target.value); el('v_T').textContent=T.toFixed(2); });
+el('s_V').addEventListener('input',e=>{V=parseFloat(e.target.value); el('v_V').textContent=V.toFixed(0); });
+el('s_N').addEventListener('input',e=>{N=parseInt(e.target.value); el('v_N').textContent=N; });
+el('play').addEventListener('click',()=>{ playing=!playing; el('play').textContent=playing?'⏸ 흐름 정지':'▶ 흐름 재생'; });
+loop();
+</script>
+</body>
+</html>

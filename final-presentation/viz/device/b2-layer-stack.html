@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>B2 · 헤테로구조 layer stack</title>
+<link rel="stylesheet" href="../shared/style.css">
+<script src="../shared/embed.js"></script>
+</head>
+<body>
+<header>
+  <h1>B2 · GaAs/AlGaAs 헤테로구조 layer stack (screening wells)</h1>
+  <p>Supp. Fig 1 · 30 nm primary well 양옆에 13 nm screening well 2개를 두어 bulk–edge Coulomb interaction을 줄인다. screening 거리 d로부터 단위면적 capacitance C<sub>SW</sub>=2ε/d 가 정해진다. · 막대 hover로 상세 · <a href="../index.html">← 갤러리</a></p>
+</header>
+
+<div class="wrap">
+  <div class="plots">
+    <div class="card">
+      <h2>layer stack (위 = 표면, 두께 ∝ √thickness)</h2>
+      <canvas id="cv" width="520" height="560"></canvas>
+    </div>
+  </div>
+  <div class="controls">
+    <div class="card">
+      <h2>hover 정보</h2>
+      <div class="readout">
+        <div><span>layer</span><b id="o_name">–</b></div>
+        <div><span>두께</span><b id="o_thk">–</b></div>
+        <div><span>역할</span><b id="o_role">–</b></div>
+      </div>
+    </div>
+    <div class="card">
+      <h2>Screening capacitance</h2>
+      <div class="slider">
+        <label>setback d <b id="v_d">48</b> nm</label>
+        <input id="s_d" type="range" min="20" max="80" step="1" value="48">
+        <div class="sub">primary well ↔ screening well 거리</div>
+      </div>
+      <div class="readout">
+        <div><span>C_SW = 2ε/d</span><b id="o_csw">–</b></div>
+        <div><span>ε_r</span><b>12.9</b></div>
+      </div>
+      <div class="sub" style="margin-top:8px">인수 2 = screening well 2개. 이 C_SW가 charging energy E_c=e²/2C와 constant-ν 폭 ΔB ∝ C_SW를 결정한다.</div>
+    </div>
+    <div class="card">
+      <h2>범례</h2>
+      <div class="fixed">
+        <span style="color:#5a8cff">■</span> GaAs &nbsp;
+        <span style="color:#4caf50">■</span> Al₀.₃₆Ga₀.₆₄As &nbsp;
+        <span style="color:#e25555">■</span> AlAs<br>
+        ◆ Si δ-doping &nbsp; ★ well (강조)
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+"use strict";
+const el=id=>document.getElementById(id);
+const cv=document.getElementById('cv'), ctx=cv.getContext('2d');
+// top -> bottom
+const L=[
+  {n:'10 nm GaAs',t:10,c:'#5a8cff',role:'cap layer'},
+  {n:'65 nm AlGaAs',t:65,c:'#4caf50',role:'barrier'},
+  {n:'Si δ-doping',t:4,c:'#dddddd',role:'전자 공급 (donor)',dope:true},
+  {n:'45 nm AlGaAs',t:45,c:'#4caf50',role:'barrier'},
+  {n:'2 nm AlAs',t:2,c:'#e25555',role:'thin barrier'},
+  {n:'13 nm GaAs',t:13,c:'#5a8cff',role:'Top Screening Well',well:true},
+  {n:'2 nm AlAs',t:2,c:'#e25555',role:'thin barrier'},
+  {n:'25 nm AlGaAs',t:25,c:'#4caf50',role:'setback (well↔SW)'},
+  {n:'30 nm GaAs',t:30,c:'#5a8cff',role:'Primary Well (2DES)',prim:true},
+  {n:'25 nm AlGaAs',t:25,c:'#4caf50',role:'setback (well↔SW)'},
+  {n:'2 nm AlAs',t:2,c:'#e25555',role:'thin barrier'},
+  {n:'13 nm GaAs',t:13,c:'#5a8cff',role:'Bottom Screening Well',well:true},
+  {n:'2 nm AlAs',t:2,c:'#e25555',role:'thin barrier'},
+  {n:'45 nm AlGaAs',t:45,c:'#4caf50',role:'barrier'},
+  {n:'Si δ-doping',t:4,c:'#dddddd',role:'전자 공급 (donor)',dope:true},
+  {n:'Substrate',t:40,c:'#2c3340',role:'GaAs substrate'}
+];
+let hot=-1;
+const PAD=14, X0=30, BARW=300, LABELX=X0+BARW+14;
+function ys(){
+  const tot=L.reduce((s,l)=>s+Math.sqrt(l.t),0);
+  const H=cv.height-2*PAD; let y=PAD; const out=[];
+  for(const l of L){ const h=Math.sqrt(l.t)/tot*H; out.push({y,h,l}); y+=h; } return out;
+}
+function draw(){
+  ctx.fillStyle='#0b0d12'; ctx.fillRect(0,0,cv.width,cv.height);
+  const rows=ys();
+  rows.forEach((r,i)=>{
+    ctx.fillStyle=r.l.c; ctx.globalAlpha=(i===hot)?1:0.9; ctx.fillRect(X0,r.y,BARW,r.h-1); ctx.globalAlpha=1;
+    if(r.l.dope){ ctx.strokeStyle='#fff'; ctx.setLineDash([6,5]); ctx.lineWidth=1.5;
+      ctx.beginPath(); ctx.moveTo(X0,r.y+r.h/2); ctx.lineTo(X0+BARW,r.y+r.h/2); ctx.stroke(); ctx.setLineDash([]); }
+    if(r.l.well||r.l.prim){ ctx.strokeStyle=r.l.prim?'#ffd27d':'#8f8'; ctx.lineWidth=2.5; ctx.strokeRect(X0+1,r.y+1,BARW-2,r.h-3); }
+    if(i===hot){ ctx.strokeStyle='#4ea1ff'; ctx.lineWidth=2; ctx.strokeRect(X0,r.y,BARW,r.h-1); }
+    // label
+    ctx.fillStyle=(r.h>11)?'#0b0d12':'#cbd3df'; ctx.font='11px sans-serif'; ctx.textAlign='left'; ctx.textBaseline='middle';
+    if(r.h>12){ ctx.fillStyle='#10131a'; ctx.fillText(r.l.n, X0+8, r.y+r.h/2); }
+    else { ctx.fillStyle='#9aa3af'; ctx.fillText(r.l.n, LABELX, r.y+r.h/2); }
+    if(r.l.prim||r.l.well){ ctx.fillStyle=r.l.prim?'#ffd27d':'#8f8'; ctx.textAlign='left'; ctx.fillText('★ '+r.l.role, LABELX, r.y+r.h/2); }
+  });
+  // setback bracket d between primary well and top screening well
+  const sw=rows.find(r=>r.l.role==='Top Screening Well'), pw=rows.find(r=>r.l.prim);
+  if(sw&&pw){ const yA=sw.y+sw.h/2, yB=pw.y+pw.h/2; const bx=X0-14;
+    ctx.strokeStyle='#ffd27d'; ctx.lineWidth=1.5; ctx.beginPath();
+    ctx.moveTo(bx,yA); ctx.lineTo(bx,yB); ctx.moveTo(bx,yA);ctx.lineTo(bx+6,yA); ctx.moveTo(bx,yB);ctx.lineTo(bx+6,yB); ctx.stroke();
+    ctx.fillStyle='#ffd27d'; ctx.save(); ctx.translate(bx-4,(yA+yB)/2); ctx.rotate(-Math.PI/2); ctx.textAlign='center'; ctx.fillText('d (setback)',0,0); ctx.restore(); }
+}
+cv.addEventListener('mousemove',e=>{
+  const rect=cv.getBoundingClientRect(); const my=(e.clientY-rect.top)*(cv.height/rect.height);
+  const rows=ys(); hot=rows.findIndex(r=>my>=r.y&&my<r.y+r.h);
+  if(hot>=0){ const l=L[hot]; el('o_name').textContent=l.n; el('o_thk').textContent=l.t+' nm'; el('o_role').textContent=l.role; }
+  draw();
+});
+cv.addEventListener('mouseleave',()=>{ hot=-1; draw(); });
+function csw(){
+  const d=parseFloat(el('s_d').value)*1e-9; const eps=8.8541878128e-12*12.9;
+  const C=2*eps/d;                          // F/m^2
+  el('v_d').textContent=el('s_d').value;
+  // F/m^2 -> fF/um^2 :  /1e12 (um^2 per m^2) then *1e15 (F->fF) = *1e3
+  el('o_csw').textContent=(C*1e3).toFixed(2)+' fF/μm²';
+}
+el('s_d').addEventListener('input',csw);
+csw(); draw();
+</script>
+</body>
+</html>

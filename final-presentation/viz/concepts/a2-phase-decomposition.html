@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>A2 · 간섭 위상 분해 (Eqn 1)</title>
+<link rel="stylesheet" href="../shared/style.css">
+</head>
+<body>
+<header>
+  <h1>A2 · 간섭 위상의 분해: AB 항 + anyon 항</h1>
+  <p>본문 Eqn 1 · θ = 2π(e*/e)A<sub>I</sub>B/Φ₀ + N<sub>qp</sub>θ<sub>anyon</sub> · 연속적 Aharonov–Bohm 항과 이산적 anyon 항이 더해져 δG = cos θ 가 된다. · <a href="../index.html">← 갤러리</a></p>
+</header>
+
+<div class="wrap">
+  <div class="plots">
+    <div class="card">
+      <h2>위상바늘 합성 (단위원)</h2>
+      <canvas id="dial" width="760" height="260"></canvas>
+    </div>
+    <div class="card">
+      <h2>δG = cos θ  vs  B  (현재 점 표시)</h2>
+      <canvas id="trace" width="760" height="180"></canvas>
+    </div>
+  </div>
+  <div class="controls">
+    <div class="card">
+      <h2>제어</h2>
+      <div class="slider">
+        <label>자기장 B <b id="v_B">8.653</b> T</label>
+        <input id="s_B" type="range" min="8.2" max="9.1" step="0.001" value="8.653">
+        <div class="sub">AB 항을 연속적으로 회전시킨다</div>
+      </div>
+      <div class="slider">
+        <label>side gate δV_g <b id="v_V">0</b> mV</label>
+        <input id="s_V" type="range" min="-30" max="0" step="0.1" value="0">
+        <div class="sub">면적 A_I = A₀ + (∂A/∂V_g)δV_g 변화</div>
+      </div>
+      <div class="slider">
+        <label>둘러싼 quasiparticle N_qp <b id="v_N">0</b></label>
+        <input id="s_N" type="range" min="-4" max="4" step="1" value="0">
+        <div class="sub">anyon 항을 N·θ_anyon 만큼 이산 점프</div>
+      </div>
+    </div>
+    <div class="card">
+      <h2>위상 분해</h2>
+      <div class="readout">
+        <div><span>AB 위상</span><b id="o_ab">–</b></div>
+        <div><span>anyon 위상</span><b id="o_an">–</b></div>
+        <div><span>총 θ</span><b id="o_tot">–</b></div>
+        <div><span>δG = cos θ</span><b id="o_g">–</b></div>
+      </div>
+      <div class="sub" style="margin-top:8px">파랑 = AB 항(연속), 주황 = anyon 항(이산), 흰색 = 합.</div>
+    </div>
+    <div class="card">
+      <h2>고정값</h2>
+      <div class="fixed"><code>ν=1/3, e*/e=1/3, θ_anyon=2π/3</code><br>
+      <code>A₀=0.098 μm², ∂A/∂V_g=0.120 μm²/V</code></div>
+    </div>
+  </div>
+</div>
+
+<script src="../shared/physics.js"></script>
+<script src="../shared/render.js"></script>
+<script>
+"use strict";
+const el=id=>document.getElementById(id), PI=Math.PI, TWO=2*PI;
+const A0=0.098e-12, DAD=0.120e-12, PHI0=FQH.PHI0, ESTAR=1/3, THETA=2*PI/3;
+const dial=document.getElementById('dial'), dctx=dial.getContext('2d');
+const tr=document.getElementById('trace'), tctx=tr.getContext('2d');
+
+function abPhase(B,V){ const A=A0+DAD*(V*1e-3); return TWO*ESTAR*A*B/PHI0; }
+function wrap(p){ let x=p%TWO; if(x<0)x+=TWO; return x; }
+function fmt(p){ return (p/PI).toFixed(2)+'π'; }
+
+function drawDial(B,V,N){
+  const W=dial.width,H=dial.height; dctx.fillStyle='#000'; dctx.fillRect(0,0,W,H);
+  const cx=H/2+10, cy=H/2, r=H/2-26;
+  // unit circle
+  dctx.strokeStyle='#2a2f39'; dctx.beginPath(); dctx.arc(cx,cy,r,0,TWO); dctx.stroke();
+  dctx.strokeStyle='#1b1f27'; dctx.beginPath(); dctx.moveTo(cx-r,cy);dctx.lineTo(cx+r,cy);dctx.moveTo(cx,cy-r);dctx.lineTo(cx,cy+r);dctx.stroke();
+  const ab=abPhase(B,V), an=N*THETA, tot=ab+an;
+  const ang=p=>p-PI/2;     // 0 phase points up
+  // AB arrow (from center)
+  arrow(cx,cy, cx+r*Math.cos(ang(ab)), cy+r*Math.sin(ang(ab)), '#4ea1ff',2);
+  // anyon arrow appended at tip of AB
+  const tx=cx+r*Math.cos(ang(ab)), ty=cy+r*Math.sin(ang(ab));
+  arrow(tx,ty, tx+r*Math.cos(ang(tot))-r*Math.cos(ang(ab)), ty+r*Math.sin(ang(tot))-r*Math.sin(ang(ab)), '#ffa05a',2);
+  // total arrow
+  arrow(cx,cy, cx+r*Math.cos(ang(tot)), cy+r*Math.sin(ang(tot)), '#ffffff',2.5);
+  // projection (cos) onto vertical = real part used as cos(theta)
+  dctx.fillStyle='#9aa3af'; dctx.font='12px sans-serif'; dctx.textAlign='left';
+  dctx.fillText('AB = '+fmt(wrap(ab)), 2*cx+6, 40);
+  dctx.fillStyle='#ffa05a'; dctx.fillText('anyon N·θ = '+fmt(an), 2*cx+6, 62);
+  dctx.fillStyle='#fff'; dctx.fillText('θ = '+fmt(wrap(tot)), 2*cx+6, 84);
+  dctx.fillStyle='#cbd3df'; dctx.fillText('cos θ = '+Math.cos(tot).toFixed(3), 2*cx+6, 110);
+  // readouts
+  el('o_ab').textContent=fmt(wrap(ab)); el('o_an').textContent=fmt(an);
+  el('o_tot').textContent=fmt(wrap(tot)); el('o_g').textContent=Math.cos(tot).toFixed(3);
+}
+function arrow(x0,y0,x1,y1,col,lw){
+  dctx.strokeStyle=col; dctx.fillStyle=col; dctx.lineWidth=lw;
+  dctx.beginPath(); dctx.moveTo(x0,y0); dctx.lineTo(x1,y1); dctx.stroke();
+  const a=Math.atan2(y1-y0,x1-x0), s=6;
+  dctx.beginPath(); dctx.moveTo(x1,y1); dctx.lineTo(x1-s*Math.cos(a-0.4),y1-s*Math.sin(a-0.4));
+  dctx.lineTo(x1-s*Math.cos(a+0.4),y1-s*Math.sin(a+0.4)); dctx.closePath(); dctx.fill();
+}
+function drawTrace(B,V,N){
+  const W=tr.width,H=tr.height; tctx.fillStyle='#0c0e12'; tctx.fillRect(0,0,W,H);
+  const g={x:50,y:14,w:W-70,h:H-44};
+  const X=B=>g.x+(B-8.2)/(9.1-8.2)*g.w, Y=v=>g.y+(1-v)/2*g.h;
+  tctx.strokeStyle='#333'; tctx.beginPath(); tctx.moveTo(g.x,Y(0)); tctx.lineTo(g.x+g.w,Y(0)); tctx.stroke();
+  tctx.strokeStyle='#4ea1ff'; tctx.lineWidth=1.6; tctx.beginPath();
+  for(let i=0;i<=400;i++){ const b=8.2+0.9*i/400; const th=abPhase(b,V)+N*THETA; const y=Y(Math.cos(th));
+    const x=X(b); if(i===0)tctx.moveTo(x,y); else tctx.lineTo(x,y);} tctx.stroke();
+  // current point
+  const cth=abPhase(B,V)+N*THETA; tctx.fillStyle='#fff'; tctx.beginPath(); tctx.arc(X(B),Y(Math.cos(cth)),4,0,TWO); tctx.fill();
+  VZ.frame(tctx,g,{xr:[8.2,9.1],yr:[-1,1],xstep:0.1,ystep:1,xlabel:'B (T)',ylabel:'cos θ'});
+}
+function render(){
+  const B=parseFloat(el('s_B').value), V=parseFloat(el('s_V').value), N=parseInt(el('s_N').value);
+  el('v_B').textContent=B.toFixed(3); el('v_V').textContent=V.toFixed(0); el('v_N').textContent=N;
+  drawDial(B,V,N); drawTrace(B,V,N);
+}
+for(const id of ['s_B','s_V','s_N']) el(id).addEventListener('input',render);
+render();
+</script>
+</body>
+</html>

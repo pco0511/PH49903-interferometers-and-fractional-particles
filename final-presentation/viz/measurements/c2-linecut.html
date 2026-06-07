@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>C2 · 라인컷: δG vs δV_g, 영역별 주기/기울기</title>
+<link rel="stylesheet" href="../shared/style.css">
+</head>
+<body>
+<header>
+  <h1>C2 · 라인컷 δG vs δV_g — 중심 vs 고/저 field 주기 변화</h1>
+  <p>Supp. Fig 4a · 같은 등위상선이 연속이지만 side gate 주기는 중심(≈8.5 mV)보다 고/저 field(5.4–5.8 mV)에서 작아진다. ∂θ/∂V_g 의 두 번째 항(anyon)이 주기를 줄인다. · <a href="../index.html">← 갤러리</a></p>
+</header>
+
+<div class="wrap">
+  <div class="plots">
+    <div class="card">
+      <h2>δG(B, δV_g) 맵 — 세로선 = 선택한 B</h2>
+      <canvas id="map" width="760" height="300"></canvas>
+    </div>
+    <div class="card">
+      <h2>라인컷  δG vs δV_g  @ 선택 B</h2>
+      <canvas id="cut" width="760" height="180"></canvas>
+    </div>
+  </div>
+  <div class="controls">
+    <div class="card">
+      <h2>제어</h2>
+      <div class="slider">
+        <label>자기장 B <b id="v_B">8.85</b> T</label>
+        <input id="s_B" type="range" min="8.2" max="9.1" step="0.005" value="8.85">
+        <div class="sub">중심(≈8.65) ↔ 저(8.4)/고(9.3 범위밖이라 9.05)</div>
+      </div>
+      <div class="slider">
+        <label>온도 kT/E_c <b id="v_T">0.020</b></label>
+        <input id="s_T" type="range" min="-3.1" max="-0.7" step="0.01" value="-1.699">
+      </div>
+      <div class="row">
+        <button data-b="8.4">8.4T 저</button>
+        <button data-b="8.653">8.65T 중심</button>
+        <button data-b="9.05">9.05T 고</button>
+      </div>
+    </div>
+    <div class="card">
+      <h2>주기 (sim ↔ 실측)</h2>
+      <div class="readout">
+        <div><span>@B Vg-주기 (sim)</span><b id="o_per">–</b></div>
+        <div><span>regime</span><b id="o_reg">–</b></div>
+        <div><span>실측 중심</span><b>8.5 mV</b></div>
+        <div><span>실측 저/고</span><b>5.8 / 5.4 mV</b></div>
+      </div>
+      <div class="sub" style="margin-top:8px">중심: ∂θ/∂V_g = 2π(e*/e)(B/Φ₀)(∂A/∂V_g) 만. side: + θ_anyon ∂⟨N_L⟩/∂V_g 추가 → 주기↓. <b>sim은 축소 geometry(A₀=0.098 μm²)라 절대 주기가 실측보다 크다 — 핵심은 추세(중심 &gt; side).</b></div>
+    </div>
+  </div>
+</div>
+
+<script src="../shared/physics.js"></script>
+<script src="../shared/render.js"></script>
+<script>
+"use strict";
+const el=id=>document.getElementById(id);
+const map=document.getElementById('map'), mctx=map.getContext('2d');
+const cut=document.getElementById('cut'), cctx=cut.getContext('2d');
+const NB=300, NV=160;
+const P0={A0:0.098e-12,dad:0.120e-12,dqe:1.07,Bc:8.653,ab:0.100,ratio:0.02};
+const hm=VZ.makeHeatmap(NB,NV);
+let cacheRatio=null, cacheGrid=null;            // heatmap depends only on ratio, not B
+
+function drawMap(B,ratio){
+  if(ratio!==cacheRatio){ cacheGrid=FQH.grid(Object.assign({},P0,{ratio:ratio}),NB,NV); cacheRatio=ratio; }
+  const g=cacheGrid;
+  VZ.paintHeatmap(hm,g.dG,g.vmax,'div');
+  const W=map.width,H=map.height; mctx.fillStyle='#000'; mctx.fillRect(0,0,W,H);
+  const box={x:50,y:14,w:W-70,h:H-44};
+  mctx.imageSmoothingEnabled=true; mctx.drawImage(hm.buf,box.x,box.y,box.w,box.h);
+  const m=VZ.frame(mctx,box,{xr:[8.2,9.1],yr:[-30,0],xstep:0.1,ystep:5,xlabel:'B (T)',ylabel:'δV_g (mV)'});
+  mctx.strokeStyle='#fff'; mctx.lineWidth=1.5; mctx.setLineDash([5,3]);
+  mctx.beginPath(); mctx.moveTo(m.X(B),box.y); mctx.lineTo(m.X(B),box.y+box.h); mctx.stroke(); mctx.setLineDash([]);
+  return g;
+}
+function measurePeriod(line){
+  // distance between successive maxima of dG vs Vg
+  const y=line.dG, v=line.Vg; const peaks=[];
+  for(let i=1;i<y.length-1;i++) if(y[i]>y[i-1]&&y[i]>=y[i+1]&&y[i]>0.05) peaks.push(v[i]);
+  if(peaks.length<2) return null;
+  let s=0; for(let i=1;i<peaks.length;i++) s+=Math.abs(peaks[i]-peaks[i-1]);
+  return s/(peaks.length-1);
+}
+function drawCut(B,ratio){
+  const line=FQH.lineVsVg(B,Object.assign({},P0,{ratio:ratio}),300);
+  const W=cut.width,H=cut.height; cctx.fillStyle='#0c0e12'; cctx.fillRect(0,0,W,H);
+  const g={x:50,y:14,w:W-70,h:H-44};
+  let amax=0.01; for(const d of line.dG) amax=Math.max(amax,Math.abs(d));
+  const X=v=>g.x+(v-(-30))/30*g.w, Y=d=>g.y+(amax-d)/(2*amax)*g.h;
+  cctx.strokeStyle='#333'; cctx.beginPath(); cctx.moveTo(g.x,Y(0)); cctx.lineTo(g.x+g.w,Y(0)); cctx.stroke();
+  cctx.strokeStyle='#4ea1ff'; cctx.lineWidth=1.8; cctx.beginPath();
+  for(let i=0;i<line.Vg.length;i++){ const x=X(line.Vg[i]),y=Y(line.dG[i]); if(i===0)cctx.moveTo(x,y); else cctx.lineTo(x,y);} cctx.stroke();
+  VZ.frame(cctx,g,{xr:[-30,0],yr:[-amax,amax],xstep:5,ystep:amax,xlabel:'δV_g (mV)',ylabel:'δG',yfmt:v=>v.toFixed(2)});
+  const per=measurePeriod(line);
+  el('o_per').textContent=per?per.toFixed(1)+' mV':'—';
+  const central=Math.abs(FQH.point(B,0,FQH.norm(Object.assign({},P0,{ratio:ratio}))).N)<0.5;
+  el('o_reg').textContent=central?'중심 (AB)':'side (qp/qh)';
+}
+function render(){
+  const B=parseFloat(el('s_B').value), ratio=Math.pow(10,parseFloat(el('s_T').value));
+  el('v_B').textContent=B.toFixed(3); el('v_T').textContent=ratio.toFixed(3);
+  drawMap(B,ratio); drawCut(B,ratio);
+}
+for(const id of ['s_B','s_T']) el(id).addEventListener('input',render);
+document.querySelectorAll('button[data-b]').forEach(b=>b.addEventListener('click',()=>{ el('s_B').value=b.dataset.b; render(); }));
+render();
+</script>
+</body>
+</html>

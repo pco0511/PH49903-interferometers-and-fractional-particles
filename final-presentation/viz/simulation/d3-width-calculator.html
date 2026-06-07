@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>D3 · constant-ν 폭 ΔB 예측 계산기</title>
+<link rel="stylesheet" href="../shared/style.css">
+</head>
+<body>
+<header>
+  <h1>D3 · constant-ν 영역 폭 ΔB 예측 (이론 ↔ 실험)</h1>
+  <p>본문 · ΔB<sub>const-ν</sub> = Δ<sub>1/3</sub> Φ₀ C<sub>SW</sub> / (ν e² (e*/e)) · gap Δ, screening capacitance C<sub>SW</sub>=2ε/d 로부터 음기울기 AB 영역 폭을 예측 → 관측 ≈450 mT. · <a href="../index.html">← 갤러리</a></p>
+</header>
+
+<div class="wrap">
+  <div class="plots">
+    <div class="card">
+      <h2>예측 ΔB vs 관측 (450 mT)</h2>
+      <canvas id="bar" width="760" height="220"></canvas>
+    </div>
+    <div class="card">
+      <h2>식 분해</h2>
+      <div class="card" style="background:#0c0e12;margin:0">
+        <p class="eq" style="font-size:15px">ΔB = Δ·Φ₀·C_SW / (ν·e²·(e*/e))</p>
+        <div class="readout" style="margin-top:8px">
+          <div><span>Δ (J)</span><b id="o_dJ">–</b></div>
+          <div><span>C_SW (F/m²)</span><b id="o_c">–</b></div>
+          <div><span>분자</span><b id="o_num">–</b></div>
+          <div><span>분모</span><b id="o_den">–</b></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="controls">
+    <div class="card">
+      <h2>입력</h2>
+      <div class="slider"><label>energy gap Δ <b id="v_D">5.5</b> K</label>
+        <input id="s_D" type="range" min="3" max="8" step="0.1" value="5.5">
+        <div class="sub">Supp. Fig 3 측정 ≈5.5 K</div></div>
+      <div class="slider"><label>setback d <b id="v_d">48</b> nm</label>
+        <input id="s_d" type="range" min="20" max="80" step="1" value="48">
+        <div class="sub">C_SW = 2ε/d</div></div>
+      <div class="slider"><label>ε_r <b id="v_e">12.9</b></label>
+        <input id="s_e" type="range" min="10" max="14" step="0.1" value="12.9"></div>
+    </div>
+    <div class="card">
+      <h2>결과</h2>
+      <div class="readout">
+        <div><span>예측 ΔB</span><b id="o_pred">–</b></div>
+        <div><span>관측</span><b>≈450 mT</b></div>
+        <div><span>비율</span><b id="o_ratio">–</b></div>
+      </div>
+      <div class="sub" style="margin-top:8px">기본값에서 ≈524 mT 예측(논문 본문 ~530 mT), 관측 450 mT 와 잘 일치.</div>
+    </div>
+  </div>
+</div>
+
+<script>
+"use strict";
+const el=id=>document.getElementById(id);
+const KB=1.380649e-23, ECH=1.602176634e-19, EPS0=8.8541878128e-12;
+const PHI0=6.62607015e-34/ECH, NU=1/3, ESTAR=1/3, OBS=0.450;
+const bar=document.getElementById('bar'), bctx=bar.getContext('2d');
+function calc(){
+  const D=parseFloat(el('s_D').value), d=parseFloat(el('s_d').value)*1e-9, er=parseFloat(el('s_e').value);
+  const DJ=D*KB, C=2*EPS0*er/d;
+  const num=DJ*PHI0*C, den=NU*ECH*ECH*ESTAR;
+  const dB=num/den;                              // Tesla
+  return {DJ,C,num,den,dB};
+}
+function draw(){
+  el('v_D').textContent=el('s_D').value; el('v_d').textContent=el('s_d').value; el('v_e').textContent=el('s_e').value;
+  const c=calc();
+  el('o_dJ').textContent=c.DJ.toExponential(2); el('o_c').textContent=c.C.toExponential(2);
+  el('o_num').textContent=c.num.toExponential(2); el('o_den').textContent=c.den.toExponential(2);
+  el('o_pred').textContent=(c.dB*1e3).toFixed(0)+' mT';
+  el('o_ratio').textContent=(c.dB/OBS).toFixed(2)+'×';
+  // bars
+  const W=bar.width,H=bar.height; bctx.fillStyle='#000'; bctx.fillRect(0,0,W,H);
+  const g={x:90,y:30,w:W-140,h:H-70}; const max=0.7;
+  const X=v=>g.x+v/max*g.w;
+  const rows=[['예측',c.dB,'#4ea1ff'],['관측',OBS,'#8f8']];
+  rows.forEach((r,i)=>{ const y=g.y+i*54;
+    bctx.fillStyle=r[2]; bctx.fillRect(g.x,y,X(r[1])-g.x,30);
+    bctx.fillStyle='#cbd3df'; bctx.font='12px sans-serif'; bctx.textAlign='right'; bctx.textBaseline='middle';
+    bctx.fillText(r[0],g.x-8,y+15); bctx.textAlign='left'; bctx.fillText((r[1]*1e3).toFixed(0)+' mT',X(r[1])+6,y+15);
+  });
+  bctx.strokeStyle='#888'; bctx.beginPath(); bctx.moveTo(g.x,g.y+g.h); bctx.lineTo(g.x+g.w,g.y+g.h); bctx.stroke();
+  bctx.fillStyle='#9aa3af'; bctx.textAlign='center'; bctx.textBaseline='top';
+  for(let v=0;v<=max+1e-9;v+=0.1){ const x=X(v); bctx.beginPath(); bctx.moveTo(x,g.y+g.h);bctx.lineTo(x,g.y+g.h+4);bctx.stroke(); bctx.fillText((v*1e3).toFixed(0),x,g.y+g.h+6); }
+  bctx.fillText('ΔB (mT)', g.x+g.w/2, g.y+g.h+22);
+}
+['s_D','s_d','s_e'].forEach(id=>el(id).addEventListener('input',draw));
+draw();
+</script>
+</body>
+</html>

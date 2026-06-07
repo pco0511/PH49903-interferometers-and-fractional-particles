@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Supp. Fig. 5 — interactive (Nakamura et al. 2020, arXiv:2006.14115)</title>
+<style>
+  :root { --bg:#0f1115; --panel:#181c23; --ink:#e8eaed; --mut:#9aa3af; --acc:#4ea1ff; }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--bg); color:var(--ink);
+         font-family: -apple-system, "Segoe UI", Roboto, sans-serif; }
+  header { padding:14px 20px; border-bottom:1px solid #2a2f39; }
+  header h1 { font-size:16px; margin:0; font-weight:600; }
+  header p  { font-size:12px; margin:4px 0 0; color:var(--mut); }
+  .wrap { display:flex; gap:18px; padding:18px; flex-wrap:wrap; }
+  .plots { flex:1 1 560px; min-width:520px; }
+  .controls { flex:0 0 340px; }
+  canvas { background:#000; border-radius:6px; display:block; width:100%; }
+  .card { background:var(--panel); border:1px solid #2a2f39; border-radius:8px;
+          padding:14px 16px; margin-bottom:14px; }
+  .card h2 { font-size:12px; text-transform:uppercase; letter-spacing:.5px;
+             color:var(--mut); margin:0 0 10px; }
+  .slider { margin:12px 0; }
+  .slider label { display:flex; justify-content:space-between; font-size:13px; margin-bottom:4px; }
+  .slider label b { color:var(--acc); font-variant-numeric:tabular-nums; font-weight:600; }
+  .slider input[type=range] { width:100%; accent-color:var(--acc); }
+  .sub { font-size:11px; color:var(--mut); margin-top:1px; }
+  .readout { display:grid; grid-template-columns:1fr 1fr; gap:6px 14px; font-size:13px; }
+  .readout div span { color:var(--mut); }
+  .readout div b { float:right; font-variant-numeric:tabular-nums; }
+  .fixed { font-size:11px; color:var(--mut); line-height:1.7; }
+  .fixed code { color:#cbd3df; }
+  button { background:#222834; color:var(--ink); border:1px solid #38404e;
+           padding:7px 12px; border-radius:6px; cursor:pointer; font-size:12px; }
+  button:hover { border-color:var(--acc); }
+  .tag { display:inline-block; font-size:10px; padding:1px 6px; border-radius:10px;
+         background:#243; color:#8f8; margin-left:6px; }
+</style>
+</head>
+<body>
+<header>
+  <h1>ν = 1/3 Fabry–Pérot 간섭계 시뮬레이션 — Supp. Fig. 5 인터랙티브</h1>
+  <p>Nakamura et al., arXiv:2006.14115v1 · 열평균 컨덕턴스 ⟨δG⟩(B, δV_g) = (1/Z) Σ<sub>N</sub> e<sup>−E(N)/kT</sup> cos(2π(e*/e)A_I B/Φ₀ + N·θ<sub>anyon</sub>)</p>
+</header>
+
+<div class="wrap">
+  <div class="plots">
+    <div class="card">
+      <h2>컨덕턴스 맵 δG(B, δV_g)<span class="tag" id="tempTag">kT/E_c</span></h2>
+      <canvas id="map" width="760" height="340"></canvas>
+    </div>
+    <div class="card">
+      <h2>⟨N_qp⟩ vs B  (δV_g = 0 라인컷)</h2>
+      <canvas id="nqp" width="760" height="170"></canvas>
+    </div>
+  </div>
+
+  <div class="controls">
+    <div class="card">
+      <h2>비고정 파라미터 (슬라이더)</h2>
+
+      <div class="slider">
+        <label>온도 kT/E_c <b id="v_ratio">0.020</b></label>
+        <input id="s_ratio" type="range" min="-3.1" max="-0.7" step="0.01" value="-1.699">
+        <div class="sub">로그 스케일 · 논문 패널 a/b/c = 0.002 / 0.02 / 0.1 · 현재 T ≈ <span id="v_T">39</span> mK</div>
+      </div>
+
+      <div class="slider">
+        <label>A₀ (면적) <b id="v_A0">0.098</b> μm²</label>
+        <input id="s_A0" type="range" min="0.05" max="0.25" step="0.001" value="0.098">
+        <div class="sub">B-주기 ∝ 1/A₀ · 픽셀적합 0.098</div>
+      </div>
+
+      <div class="slider">
+        <label>∂A/∂V_g (게이트 레버암) <b id="v_dad">0.120</b> μm²/V</label>
+        <input id="s_dad" type="range" min="0.04" max="0.22" step="0.001" value="0.120">
+        <div class="sub">기울기·Vg-주기 · 픽셀적합 0.120 (실제소자 0.167)</div>
+      </div>
+
+      <div class="slider">
+        <label>Δ_qp/E_c (central 폭) <b id="v_dqe">1.07</b></label>
+        <input id="s_dqe" type="range" min="0.2" max="2.6" step="0.01" value="1.07">
+        <div class="sub">pure-AB 영역 폭 ∝ 이 값 · 픽셀적합 1.07</div>
+      </div>
+
+      <div class="slider">
+        <label>B_center (중심 자기장) <b id="v_Bc">8.653</b> T</label>
+        <input id="s_Bc" type="range" min="8.40" max="8.90" step="0.005" value="8.653">
+        <div class="sub">q_donor offset · AB 영역 좌우 위치</div>
+      </div>
+
+      <div class="slider">
+        <label>α_bulk (bulk 결합) <b id="v_ab">0.100</b> mV⁻¹</label>
+        <input id="s_ab" type="range" min="0.0" max="0.16" step="0.002" value="0.100">
+        <div class="sub">transition선 기울기(2번째 기울기) · 픽셀적합 0.10</div>
+      </div>
+
+      <button id="reset">그림-맞춤 기본값으로 리셋</button>
+    </div>
+
+    <div class="card">
+      <h2>실시간 도출량</h2>
+      <div class="readout">
+        <div><span>줄무늬 기울기</span><b id="o_slope">–</b></div>
+        <div><span>B-주기</span><b id="o_Bper">–</b></div>
+        <div><span>Vg-주기</span><b id="o_Vper">–</b></div>
+        <div><span>central 폭</span><b id="o_cen">–</b></div>
+        <div><span>E_c (A₀)</span><b id="o_Ec">–</b></div>
+        <div><span>q_donor/e</span><b id="o_qd">–</b></div>
+      </div>
+      <div class="sub" style="margin-top:8px">픽셀 측정: 기울기 −95 mV/T · B-주기 127 mT · Vg-주기 12.2 mV · side Vg 9.7 mV · central 447 mT</div>
+    </div>
+
+    <div class="card">
+      <h2>고정 상수 (논문값)</h2>
+      <div class="fixed">
+        <code>ν = 1/3</code>, <code>e*/e = 1/3</code>, <code>θ_anyon = 2π/3</code><br>
+        <code>Δ_qp = Δ/2 = 2.75 K</code> (full gap Δ = 5.5 K)<br>
+        <code>d = 48 nm</code>, <code>ε_r = 12.9</code>, <code>N_qp = −20…+20</code><br>
+        <code>Φ₀ = h/e</code>, B 창 = 8.2–9.1 T, δV_g = 0…−30 mV
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+"use strict";
+// ---- physical constants (SI) -------------------------------------------- //
+const E=1.602176634e-19, H=6.62607015e-34, KB=1.380649e-23,
+      EPS0=8.8541878128e-12, EPSR=12.9, PHI0=H/E, D=48e-9;
+const NU=1/3, ESTAR=1/3, THETA=2*Math.PI/3, DELTA_QP_K=2.75, NMAX=20;
+
+// field / gate window
+const BMIN=8.2, BMAX=9.1, VTOP=0, VBOT=-30;     // mV
+// simulation grid resolution (fast enough for live drag)
+const NB=300, NV=160;
+
+// precompute cos/sin of N*theta
+const cosNt=new Float64Array(2*NMAX+1), sinNt=new Float64Array(2*NMAX+1);
+for(let N=-NMAX;N<=NMAX;N++){ cosNt[N+NMAX]=Math.cos(N*THETA); sinNt[N+NMAX]=Math.sin(N*THETA); }
+
+// jet colormap (matches the paper's appearance)
+function jet(t,out,o){
+  const r=Math.max(0,Math.min(1,1.5-Math.abs(4*t-3)));
+  const g=Math.max(0,Math.min(1,1.5-Math.abs(4*t-2)));
+  const b=Math.max(0,Math.min(1,1.5-Math.abs(4*t-1)));
+  out[o]=r*255; out[o+1]=g*255; out[o+2]=b*255; out[o+3]=255;
+}
+
+// charging energy E_c (Kelvin) from A0
+function Ec_K(A0){ const C=2*EPS0*EPSR*A0/D; return (E*E/(2*C))/KB; }
+
+// ---- core simulation ---------------------------------------------------- //
+const dGbuf=new Float32Array(NB*NV);
+const nqpTop=new Float64Array(NB);
+function simulate(p){
+  const {ratio,A0,dad,dqe,Bc,ab}=p;
+  const qd=NU*A0*Bc/PHI0;
+  let vmax=1e-9;
+  for(let iy=0; iy<NV; iy++){
+    const Vg = VTOP + (VBOT-VTOP)*iy/(NV-1);      // mV (0 at top)
+    const A_I = A0 + dad*(Vg*1e-3);
+    for(let ix=0; ix<NB; ix++){
+      const B = BMIN + (BMAX-BMIN)*ix/(NB-1);
+      const fc = NU*A_I*B/PHI0;
+      const abp = 2*Math.PI*ESTAR*A_I*B/PHI0;
+      const cab=Math.cos(abp), sab=Math.sin(abp);
+      const off = fc - qd - ab*Vg;                // ab in mV^-1, Vg in mV
+      // restrict N to a window around the charge-neutral N*
+      const Nstar=Math.round(-off/ESTAR);
+      const lo=Math.max(-NMAX,Nstar-16), hi=Math.min(NMAX,Nstar+16);
+      // pass 1: min energy for stability
+      let minE=Infinity;
+      for(let N=lo;N<=hi;N++){ const dq=off+ESTAR*N; const Et=dq*dq+dqe*Math.abs(N); if(Et<minE)minE=Et; }
+      // pass 2: thermal sums
+      let Z=0,gs=0,ns=0;
+      for(let N=lo;N<=hi;N++){
+        const dq=off+ESTAR*N; const Et=dq*dq+dqe*Math.abs(N);
+        const w=Math.exp(-(Et-minE)/ratio);
+        Z+=w;
+        gs += w*(cab*cosNt[N+NMAX]-sab*sinNt[N+NMAX]);
+        ns += w*N;
+      }
+      const dG=gs/Z;
+      dGbuf[iy*NB+ix]=dG;
+      if(Math.abs(dG)>vmax) vmax=Math.abs(dG);
+      if(iy===0) nqpTop[ix]=ns/Z;
+    }
+  }
+  return vmax;
+}
+
+// ---- rendering ---------------------------------------------------------- //
+const map=document.getElementById('map'), mctx=map.getContext('2d');
+const nqp=document.getElementById('nqp'), nctx=nqp.getContext('2d');
+const buf=document.createElement('canvas'); buf.width=NB; buf.height=NV;
+const bctx=buf.getContext('2d'); const imgData=bctx.createImageData(NB,NV);
+
+const ML=52, MR=14, MT=14, MB=34;   // plot margins (px)
+
+function bToX(B,W){ return ML + (B-BMIN)/(BMAX-BMIN)*(W-ML-MR); }
+function vToY(V,H){ return MT + (VTOP-V)/(VTOP-VBOT)*(H-MT-MB); }
+
+function drawMap(vmax,p){
+  const W=map.width, H=map.height;
+  // fill imageData from dGbuf
+  const d=imgData.data;
+  for(let iy=0; iy<NV; iy++) for(let ix=0; ix<NB; ix++){
+    const t=(dGbuf[iy*NB+ix]+vmax)/(2*vmax);
+    jet(t,d,(iy*NB+ix)*4);
+  }
+  bctx.putImageData(imgData,0,0);
+  mctx.clearRect(0,0,W,H);
+  mctx.fillStyle='#000'; mctx.fillRect(0,0,W,H);
+  // heatmap into plot area (smoothed)
+  mctx.imageSmoothingEnabled=true;
+  mctx.drawImage(buf, ML, MT, W-ML-MR, H-MT-MB);
+  // central-region boundaries (|<N_qp>|<0.5)
+  let lo=-1,hi=-1;
+  for(let ix=0; ix<NB; ix++){ if(Math.abs(nqpTop[ix])<0.5){ if(lo<0)lo=ix; hi=ix; } }
+  mctx.strokeStyle='rgba(255,255,255,.85)'; mctx.setLineDash([5,4]); mctx.lineWidth=1;
+  mctx.fillStyle='#fff'; mctx.font='11px sans-serif'; mctx.textAlign='center';
+  if(lo>=0){
+    const Bl=BMIN+(BMAX-BMIN)*lo/(NB-1), Bh=BMIN+(BMAX-BMIN)*hi/(NB-1);
+    for(const B of [Bl,Bh]){ const x=bToX(B,W); mctx.beginPath(); mctx.moveTo(x,MT); mctx.lineTo(x,H-MB); mctx.stroke(); }
+    mctx.setLineDash([]);
+    mctx.fillText('Quasiparticle  Φ₀', bToX((BMIN+Bl)/2,W), MT+12);
+    mctx.fillText('Pure AB  3Φ₀',      bToX((Bl+Bh)/2,W),  MT+12);
+    mctx.fillText('Quasihole  Φ₀',     bToX((Bh+BMAX)/2,W),MT+12);
+  }
+  mctx.setLineDash([]);
+  // axes
+  mctx.strokeStyle='#888'; mctx.lineWidth=1;
+  mctx.strokeRect(ML,MT,W-ML-MR,H-MT-MB);
+  mctx.fillStyle='#cbd3df'; mctx.font='11px sans-serif';
+  mctx.textAlign='center'; mctx.textBaseline='top';
+  for(let B=8.2;B<=9.1001;B+=0.1){ const x=bToX(B,W);
+    mctx.beginPath(); mctx.moveTo(x,H-MB); mctx.lineTo(x,H-MB+4); mctx.stroke();
+    mctx.fillText(B.toFixed(1), x, H-MB+6); }
+  mctx.fillText('B (T)', (ML+W-MR)/2, H-12);
+  mctx.textAlign='right'; mctx.textBaseline='middle';
+  for(let V=0;V>=-30.001;V-=5){ const y=vToY(V,H);
+    mctx.beginPath(); mctx.moveTo(ML-4,y); mctx.lineTo(ML,y); mctx.stroke();
+    mctx.fillText(V.toFixed(0), ML-6, y); }
+  mctx.save(); mctx.translate(13,(MT+H-MB)/2); mctx.rotate(-Math.PI/2);
+  mctx.textAlign='center'; mctx.fillText('δV_g (mV)',0,0); mctx.restore();
+}
+
+function drawNqp(){
+  const W=nqp.width, H=nqp.height, ml=52, mr=14, mt=10, mb=26;
+  nctx.clearRect(0,0,W,H); nctx.fillStyle='#0c0e12'; nctx.fillRect(0,0,W,H);
+  // y-range
+  let amax=1; for(let i=0;i<NB;i++) amax=Math.max(amax,Math.abs(nqpTop[i]));
+  amax=Math.ceil(amax);
+  const x=B=>ml+(B-BMIN)/(BMAX-BMIN)*(W-ml-mr);
+  const y=n=>mt+(amax-n)/(2*amax)*(H-mt-mb);
+  nctx.strokeStyle='#333'; nctx.beginPath(); nctx.moveTo(ml,y(0)); nctx.lineTo(W-mr,y(0)); nctx.stroke();
+  nctx.strokeStyle='#4ea1ff'; nctx.lineWidth=1.8; nctx.beginPath();
+  for(let i=0;i<NB;i++){ const B=BMIN+(BMAX-BMIN)*i/(NB-1); const px=x(B),py=y(nqpTop[i]);
+    if(i===0)nctx.moveTo(px,py); else nctx.lineTo(px,py); }
+  nctx.stroke();
+  nctx.strokeStyle='#888'; nctx.lineWidth=1; nctx.strokeRect(ml,mt,W-ml-mr,H-mt-mb);
+  nctx.fillStyle='#cbd3df'; nctx.font='11px sans-serif';
+  nctx.textAlign='right'; nctx.textBaseline='middle';
+  nctx.fillText('+'+amax, ml-6, y(amax)); nctx.fillText('0', ml-6, y(0)); nctx.fillText('-'+amax, ml-6, y(-amax));
+  nctx.textAlign='center'; nctx.textBaseline='top';
+  for(let B=8.2;B<=9.1001;B+=0.1) nctx.fillText(B.toFixed(1), x(B), H-mb+5);
+  nctx.save(); nctx.translate(13,(mt+H-mb)/2); nctx.rotate(-Math.PI/2);
+  nctx.fillText('⟨N_qp⟩',0,0); nctx.restore();
+}
+
+// ---- read params, update readouts, render ------------------------------- //
+const el=id=>document.getElementById(id);
+function params(){
+  return {
+    ratio: Math.pow(10, parseFloat(el('s_ratio').value)),
+    A0:    parseFloat(el('s_A0').value)*1e-12,
+    dad:   parseFloat(el('s_dad').value)*1e-12,
+    dqe:   parseFloat(el('s_dqe').value),
+    Bc:    parseFloat(el('s_Bc').value),
+    ab:    parseFloat(el('s_ab').value),
+  };
+}
+function updateLabels(p){
+  el('v_ratio').textContent=p.ratio.toFixed(3);
+  el('v_A0').textContent=(p.A0*1e12).toFixed(3);
+  el('v_dad').textContent=(p.dad*1e12).toFixed(3);
+  el('v_dqe').textContent=p.dqe.toFixed(2);
+  el('v_Bc').textContent=p.Bc.toFixed(3);
+  el('v_ab').textContent=p.ab.toFixed(3);
+  const ec=Ec_K(p.A0);
+  el('v_T').textContent=(p.ratio*ec*1e3).toFixed(0);
+  // derived analytic quantities
+  const slope = -p.A0/(p.Bc*p.dad)*1e3;                 // mV/T
+  const Bper  = 3*PHI0/p.A0*1e3;                         // mT
+  const Vper  = 3*PHI0/(p.Bc*p.dad)*1e3;                 // mV
+  const cen   = (1/3+3*p.dqe)*3*PHI0/p.A0*1e3;           // mT
+  const qd    = NU*p.A0*p.Bc/PHI0;
+  el('o_slope').textContent=slope.toFixed(0)+' mV/T';
+  el('o_Bper').textContent=Bper.toFixed(0)+' mT';
+  el('o_Vper').textContent=Vper.toFixed(1)+' mV';
+  el('o_cen').textContent=cen.toFixed(0)+' mT';
+  el('o_Ec').textContent=ec.toFixed(2)+' K';
+  el('o_qd').textContent=qd.toFixed(1);
+}
+
+let pending=false;
+function render(){
+  pending=false;
+  const p=params();
+  updateLabels(p);
+  const vmax=simulate(p);
+  drawMap(vmax,p);
+  drawNqp();
+}
+function schedule(){ if(!pending){ pending=true; requestAnimationFrame(render); } }
+
+// wire sliders
+for(const id of ['s_ratio','s_A0','s_dad','s_dqe','s_Bc','s_ab'])
+  el(id).addEventListener('input', schedule);
+
+const DEFAULTS={s_ratio:'-1.699',s_A0:'0.098',s_dad:'0.120',s_dqe:'1.07',s_Bc:'8.653',s_ab:'0.100'};
+el('reset').addEventListener('click',()=>{ for(const k in DEFAULTS) el(k).value=DEFAULTS[k]; schedule(); });
+
+render();
+</script>
+</body>
+</html>

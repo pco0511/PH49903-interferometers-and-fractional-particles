@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>C3 · Lever arm 분해 & 주기 예측</title>
+<link rel="stylesheet" href="../shared/style.css">
+</head>
+<body>
+<header>
+  <h1>C3 · Lever arm 분해: α_bulk = α_total − α_edge</h1>
+  <p>Supp. Discussion 1 · zero-field Coulomb blockade 주기 → α_total, ν=1 AB 주기 → α_edge. 차이가 α_bulk 이고, 이것이 ν=1/3 고/저 field 주기를 줄인다. · <a href="../index.html">← 갤러리</a></p>
+</header>
+
+<div class="wrap">
+  <div class="plots">
+    <div class="card">
+      <h2>lever arm 막대  (α_total = α_edge + α_bulk)</h2>
+      <canvas id="bars" width="760" height="200"></canvas>
+    </div>
+    <div class="card">
+      <h2>ν=1/3 예측 주기 vs 측정</h2>
+      <canvas id="per" width="760" height="200"></canvas>
+    </div>
+  </div>
+  <div class="controls">
+    <div class="card">
+      <h2>측정 입력 (슬라이더)</h2>
+      <div class="slider">
+        <label>CB 주기 ΔV_CB <b id="v_cb">5.3</b> mV</label>
+        <input id="s_cb" type="range" min="4.0" max="7.0" step="0.1" value="5.3">
+        <div class="sub">→ α_total = 1/ΔV_CB</div>
+      </div>
+      <div class="slider">
+        <label>ν=1 AB 주기 ΔV_{ν=1} <b id="v_e">8.0</b> mV</label>
+        <input id="s_e" type="range" min="6.0" max="10.0" step="0.1" value="8.0">
+        <div class="sub">→ α_edge = 1/ΔV_{ν=1}</div>
+      </div>
+      <div class="slider">
+        <label>ν=1 자기장 B₁ <b id="v_b1">3.1</b> T</label>
+        <input id="s_b1" type="range" min="2.5" max="3.6" step="0.05" value="3.1">
+        <div class="sub">→ ∂A/∂V_g = Φ₀/(B₁ ΔV_{ν=1})</div>
+      </div>
+      <div class="slider">
+        <label>ν=1/3 자기장 B <b id="v_b">8.85</b> T</label>
+        <input id="s_b" type="range" min="8.2" max="9.3" step="0.05" value="8.85">
+      </div>
+    </div>
+    <div class="card">
+      <h2>도출량</h2>
+      <div class="readout">
+        <div><span>α_total</span><b id="o_at">–</b></div>
+        <div><span>α_edge</span><b id="o_ae">–</b></div>
+        <div><span>α_bulk</span><b id="o_ab">–</b></div>
+        <div><span>∂A/∂V_g</span><b id="o_dad">–</b></div>
+        <div><span>transition 기울기</span><b id="o_ts">–</b></div>
+        <div><span>면적 A_I</span><b id="o_A">–</b></div>
+      </div>
+      <div class="sub" style="margin-top:8px">논문값: α_total 0.19, α_edge 0.12, α_bulk 0.07 mV⁻¹ · transition ≈0.44 mV/mT</div>
+    </div>
+  </div>
+</div>
+
+<script src="../shared/physics.js"></script>
+<script src="../shared/render.js"></script>
+<script>
+"use strict";
+const el=id=>document.getElementById(id), PHI0=FQH.PHI0;
+const bars=document.getElementById('bars'), bctx=bars.getContext('2d');
+const per=document.getElementById('per'), pctx=per.getContext('2d');
+
+function calc(){
+  const dVcb=parseFloat(el('s_cb').value), dVe=parseFloat(el('s_e').value);
+  const B1=parseFloat(el('s_b1').value), B=parseFloat(el('s_b').value);
+  const at=1/dVcb, ae=1/dVe, ab=at-ae;                  // mV^-1
+  const dad=PHI0/(B1*(dVe*1e-3));                        // m^2/V   (Phi0/(B1*ΔV))
+  const A=PHI0/0.011;                                    // m^2  (ν=1 ΔB=11mT)
+  // ν=1/3 predicted periods (mV).  units: (B/3Φ0)*dad [V^-1] + α_bulk [V^-1] -> sum^-1 [V]
+  const cen  = 3*PHI0/(B*dad)*1e3;                       // central: AB term only
+  const sideV= 1/((B/(3*PHI0))*dad + ab*1e3);            // side: + α_bulk, in volts
+  const trans= (1/3)*A/(PHI0*(ab*1e3));                  // transition slope, V/T = mV/mT
+  return {at,ae,ab,dad,A,cen,side:sideV*1e3,trans,B};
+}
+function drawBars(c){
+  const W=bars.width,H=bars.height; bctx.fillStyle='#000'; bctx.fillRect(0,0,W,H);
+  const g={x:60,y:20,w:W-90,h:H-60}; const max=0.25;
+  const X=v=>g.x+v/max*g.w;
+  // stacked bar: edge + bulk = total
+  const y1=g.y+20, y2=g.y+70, bh=34;
+  bctx.fillStyle='#4ea1ff'; bctx.fillRect(g.x,y1,X(c.ae)-g.x,bh);
+  bctx.fillStyle='#ffa05a'; bctx.fillRect(X(c.ae),y1,X(c.at)-X(c.ae),bh);
+  bctx.fillStyle='#cbd3df'; bctx.font='12px sans-serif'; bctx.textAlign='center';
+  bctx.fillText('α_edge '+c.ae.toFixed(3),(g.x+X(c.ae))/2,y1+bh/2+4);
+  bctx.fillText('α_bulk '+c.ab.toFixed(3),(X(c.ae)+X(c.at))/2,y1+bh/2+4);
+  // total bar
+  bctx.fillStyle='#2a3b55'; bctx.fillRect(g.x,y2,X(c.at)-g.x,bh);
+  bctx.fillStyle='#cbd3df'; bctx.fillText('α_total '+c.at.toFixed(3)+' mV⁻¹',(g.x+X(c.at))/2,y2+bh/2+4);
+  // axis
+  bctx.strokeStyle='#888'; bctx.beginPath(); bctx.moveTo(g.x,g.y+g.h); bctx.lineTo(g.x+g.w,g.y+g.h); bctx.stroke();
+  bctx.fillStyle='#9aa3af'; bctx.textAlign='center'; bctx.textBaseline='top';
+  for(let v=0;v<=max+1e-9;v+=0.05){ const x=X(v); bctx.beginPath(); bctx.moveTo(x,g.y+g.h); bctx.lineTo(x,g.y+g.h+4); bctx.stroke(); bctx.fillText(v.toFixed(2),x,g.y+g.h+6); }
+  bctx.fillText('mV⁻¹', g.x+g.w, g.y+g.h+20);
+}
+function drawPer(c){
+  const W=per.width,H=per.height; pctx.fillStyle='#000'; pctx.fillRect(0,0,W,H);
+  const rows=[['중심 (8.85T)',c.cen,8.5],['저/고 field',c.side,5.6]];
+  const g={x:120,y:30,w:W-180,h:H-70}; const max=12;
+  const X=v=>g.x+v/max*g.w;
+  rows.forEach((r,i)=>{ const y=g.y+i*60;
+    pctx.fillStyle='#4ea1ff'; pctx.fillRect(g.x,y,X(r[1])-g.x,18);
+    pctx.fillStyle='#8f8'; pctx.fillRect(g.x,y+22,X(r[2])-g.x,12);
+    pctx.fillStyle='#cbd3df'; pctx.font='12px sans-serif'; pctx.textAlign='right'; pctx.textBaseline='middle';
+    pctx.fillText(r[0],g.x-8,y+14);
+    pctx.textAlign='left'; pctx.fillText('예측 '+r[1].toFixed(1)+' mV',X(r[1])+6,y+9);
+    pctx.fillStyle='#8f8'; pctx.fillText('측정 '+r[2].toFixed(1),X(r[2])+6,y+28);
+  });
+  pctx.strokeStyle='#888'; pctx.beginPath(); pctx.moveTo(g.x,g.y+g.h); pctx.lineTo(g.x+g.w,g.y+g.h); pctx.stroke();
+  pctx.fillStyle='#9aa3af'; pctx.textAlign='center'; pctx.textBaseline='top';
+  for(let v=0;v<=max;v+=2){ const x=X(v); pctx.fillText(v.toFixed(0),x,g.y+g.h+5); }
+  pctx.fillText('ΔV_g (mV)', g.x+g.w/2, g.y+g.h+20);
+}
+function render(){
+  el('v_cb').textContent=el('s_cb').value; el('v_e').textContent=el('s_e').value;
+  el('v_b1').textContent=el('s_b1').value; el('v_b').textContent=el('s_b').value;
+  const c=calc();
+  el('o_at').textContent=c.at.toFixed(3)+' mV⁻¹'; el('o_ae').textContent=c.ae.toFixed(3);
+  el('o_ab').textContent=c.ab.toFixed(3); el('o_dad').textContent=(c.dad*1e12).toFixed(3)+' μm²/V';
+  el('o_ts').textContent=c.trans.toFixed(2)+' mV/mT'; el('o_A').textContent=(c.A*1e12).toFixed(3)+' μm²';
+  drawBars(c); drawPer(c);
+}
+for(const id of ['s_cb','s_e','s_b1','s_b']) el(id).addEventListener('input',render);
+render();
+</script>
+</body>
+</html>

@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>C5 · 미분 conductance checkerboard → edge velocity</title>
+<link rel="stylesheet" href="../shared/style.css">
+</head>
+<body>
+<header>
+  <h1>C5 · 미분 conductance checkerboard → v_edge</h1>
+  <p>Supp. Fig 7 · 유한 V_sd 가 edge dispersion으로 위상 δθ = e V_sd L/(ħ v_edge) 를 더해 checkerboard를 만든다. V_sd 방향 node 간격 ΔV_sd 에서 v_edge = e* L ΔV_sd/(2πħ). 세 영역 모두 ≈(8–10)×10³ m/s 로 거의 일정. · <a href="../index.html">← 갤러리</a></p>
+</header>
+
+<div class="wrap">
+  <div class="plots">
+    <div class="card">
+      <h2>∂I/∂V_sd (V_sd, δV_g) — checkerboard</h2>
+      <canvas id="map" width="760" height="300"></canvas>
+    </div>
+    <div class="card">
+      <h2>진동 진폭 vs V_sd (FFT) — node 패턴</h2>
+      <canvas id="amp" width="760" height="160"></canvas>
+    </div>
+  </div>
+  <div class="controls">
+    <div class="card">
+      <h2>제어</h2>
+      <div class="slider">
+        <label>edge velocity v_edge <b id="v_v">9.7</b> ×10³ m/s</label>
+        <input id="s_v" type="range" min="4" max="16" step="0.1" value="9.7">
+      </div>
+      <div class="slider">
+        <label>둘레 L <b id="v_L">2.5</b> μm</label>
+        <input id="s_L" type="range" min="1.5" max="3.5" step="0.05" value="2.5">
+        <div class="sub">L ≈ 4√A_I</div>
+      </div>
+      <div class="slider">
+        <label>side gate 주기 P <b id="v_P">5.4</b> mV</label>
+        <input id="s_P" type="range" min="4" max="9" step="0.1" value="5.4">
+      </div>
+      <div class="row">
+        <button data-v="8.3">8.4T (8.3)</button>
+        <button data-v="9.7">8.85T (9.7)</button>
+        <button data-v="9.3">9.3T (9.3)</button>
+      </div>
+    </div>
+    <div class="card">
+      <h2>도출량</h2>
+      <div class="readout">
+        <div><span>node 간격 ΔV_sd</span><b id="o_dvsd">–</b></div>
+        <div><span>v_edge (역산)</span><b id="o_v">–</b></div>
+        <div><span>e*</span><b>e/3</b></div>
+      </div>
+      <div class="sub" style="margin-top:8px">ΔV_sd = 2πħ v_edge/(e* L). 논문: 8.3 / 9.7 / 9.3 ×10³ m/s (저/중/고).</div>
+    </div>
+  </div>
+</div>
+
+<script src="../shared/render.js"></script>
+<script>
+"use strict";
+const el=id=>document.getElementById(id);
+const HBAR=1.0545718e-34, ESTAR=1.602176634e-19/3;     // e* = e/3
+const map=document.getElementById('map'), mctx=map.getContext('2d');
+const amp=document.getElementById('amp'), actx=amp.getContext('2d');
+const NX=300, NY=140, VSD=100;            // Vsd in +-100 uV, Vg in -40..0 mV
+const hm=VZ.makeHeatmap(NX,NY);
+
+function dVsd(v,L){ return 2*Math.PI*HBAR*(v*1e3)/(ESTAR*(L*1e-6)) *1e6; }  // uV
+
+function draw(){
+  const v=parseFloat(el('s_v').value), L=parseFloat(el('s_L').value), P=parseFloat(el('s_P').value);
+  el('v_v').textContent=v.toFixed(1); el('v_L').textContent=L.toFixed(2); el('v_P').textContent=P.toFixed(1);
+  const dvsd=dVsd(v,L);                    // uV node spacing
+  el('o_dvsd').textContent=dvsd.toFixed(0)+' μV';
+  el('o_v').textContent=(ESTAR*(L*1e-6)*(dvsd*1e-6)/(2*Math.PI*HBAR)/1e3).toFixed(1)+' ×10³ m/s';
+  // checkerboard: cos(2π Vg/P) * cos(π Vsd/ΔVsd)
+  const data=new Float32Array(NX*NY); let vmax=1e-9;
+  for(let iy=0;iy<NY;iy++){ const Vg=0-40*iy/(NY-1);
+    for(let ix=0;ix<NX;ix++){ const Vsd=-VSD+2*VSD*ix/(NX-1);
+      const g=Math.cos(2*Math.PI*Vg/P)*Math.cos(Math.PI*Vsd/dvsd);
+      data[iy*NX+ix]=g; if(Math.abs(g)>vmax)vmax=Math.abs(g);
+    }}
+  VZ.paintHeatmap(hm,data,vmax,'div');
+  const W=map.width,H=map.height; mctx.fillStyle='#000'; mctx.fillRect(0,0,W,H);
+  const box={x:54,y:14,w:W-74,h:H-44};
+  mctx.imageSmoothingEnabled=true; mctx.drawImage(hm.buf,box.x,box.y,box.w,box.h);
+  VZ.frame(mctx,box,{xr:[-VSD,VSD],yr:[-40,0],xstep:50,ystep:10,xlabel:'V_sd (μV)',ylabel:'δV_g (mV)'});
+  // amplitude envelope |cos(π Vsd/ΔVsd)| with node markers
+  const W2=amp.width,H2=amp.height; actx.fillStyle='#0c0e12'; actx.fillRect(0,0,W2,H2);
+  const g2={x:54,y:14,w:W2-74,h:H2-44};
+  const X=vs=>g2.x+(vs+VSD)/(2*VSD)*g2.w, Y=a=>g2.y+(1-a)*g2.h;
+  actx.strokeStyle='#8f8'; actx.lineWidth=1.8; actx.beginPath();
+  for(let i=0;i<=300;i++){ const vs=-VSD+2*VSD*i/300; const a=Math.abs(Math.cos(Math.PI*vs/dvsd));
+    const x=X(vs),y=Y(a); if(i===0)actx.moveTo(x,y); else actx.lineTo(x,y);} actx.stroke();
+  // node markers
+  actx.fillStyle='#ffd27d';
+  for(let k=-3;k<=3;k++){ const vs=dvsd*(k+0.5); if(Math.abs(vs)<=VSD){ const x=X(vs); actx.beginPath(); actx.arc(x,Y(0),3,0,2*Math.PI); actx.fill(); } }
+  VZ.frame(actx,g2,{xr:[-VSD,VSD],yr:[0,1],xstep:50,ystep:0.5,xlabel:'V_sd (μV)',ylabel:'amp',yfmt:v=>v.toFixed(1)});
+}
+['s_v','s_L','s_P'].forEach(id=>el(id).addEventListener('input',draw));
+document.querySelectorAll('button[data-v]').forEach(b=>b.addEventListener('click',()=>{ el('s_v').value=b.dataset.v; draw(); }));
+draw();
+</script>
+</body>
+</html>

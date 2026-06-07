@@ -1,0 +1,313 @@
+\documentclass[a4paper,11pt]{article}
+\usepackage{amsmath,amssymb,amsthm, tikz,titlesec,hyperref,esint,braket, graphicx, mathrsfs, enumitem}
+\usepackage[a4paper,margin=2cm]{geometry}
+\linespread{1.3}
+\newtheorem{claim}{Claim}[section]
+
+\newcommand\name{Park Chanwoo}   % Name of the student
+\newcommand\university{KAIST} % Name of the university
+\newcommand\department{Physics} % Name of the department
+\newcommand\studentid{20230297} % Student ID
+\newcommand\s{\,\;}
+
+
+\newenvironment{solution}[1]
+  {\renewcommand\qedsymbol{$\square$}\begin{proof}[\textbf{Solution#1}]}
+  {\end{proof}}
+\newenvironment{note}
+  {\renewcommand\qedsymbol{$\blacksquare$}\begin{proof}[\textnormal{\textbf{note}}]}
+  {\end{proof}}
+
+\title{KAIST\\2026 Special Topics in Physics quantum Electronic Devices I: Interferometers and Fractional Particles\\
+Homework 7\bigskip}
+\author{\textbf{\Large \name} \\
+% University: \university\\
+Department: \department\\
+Student ID: \studentid}
+\date{\today}
+
+\begin{document}
+\thispagestyle{empty}
+\maketitle
+\tableofcontents
+\titleformat{\section}[frame]{\pagebreak}{\filright
+\footnotesize  \enspace \textsf{KAIST --- Interferometers and Fractional Particles 2026 Spring}\enspace}{6pt}{\Large\bfseries\filcenter}
+\setcounter{secnumdepth}{1}
+\setcounter{tocdepth}{2}
+
+\newcommand{\tr}{\operatorname{tr}}
+\newcommand{\sgn}{\operatorname{sgn}}
+\newcommand{\supp}{\operatorname{supp}}
+\renewcommand{\Re}{\operatorname{Re}}
+\renewcommand{\Im}{\operatorname{Im}}
+\newcommand{\boltz}{k_{\mathrm{B}}}
+
+\section{Landau levels}
+
+\subsection{(a)}
+
+Expand the commutator using bilinearity,
+\begin{align}
+  [\Pi_x, \Pi_y] &= [p_x + e A_x, p_y + e A_y] \\
+  &= [p_x, p_y] + e [p_x, A_y] + e [A_x, p_y] + e^2 [A_x, A_y] \\
+\end{align}
+
+Here $[p_x, p_y] = 0$ and $[A_x, A_y] = 0$. Also, for an anlytic function $F$, $[p_i, F(\mathbf{x})] = -i\hbar(\partial_i F)(\mathbf{x})$. Therefore,
+\begin{equation}
+  [\Pi_x, \Pi_y] = e[p_x, A_y] - e[p_y, A_x] = -i\hbar e \left( \partial_x A_y - \partial_y A_x \right) = -i\hbar e B
+\end{equation}
+
+
+\subsection{(b)}
+
+Introduce an operator $a$ with real number $\alpha, \beta$:
+\begin{equation}
+  a = \alpha\Pi_x + i\beta\Pi_y\qquad a^\dagger = \alpha\Pi_x - i\beta\Pi_y
+\end{equation}
+
+the commutator is
+\begin{equation}
+  [a, a^\dagger] = -2i\alpha\beta [\Pi_x, \Pi_y] = -2\alpha\beta \hbar e B
+\end{equation}
+
+Set $\alpha = -\beta = 1 / \sqrt{2\hbar eB}$ then
+\begin{equation}
+  [a, a^\dagger] = 1
+\end{equation}
+
+Also, by definition,
+\begin{equation}
+  a^\dagger a = \alpha^2 \Pi_x^2 + \beta^2 \Pi_y^2 + i\alpha\beta [\Pi_x, \Pi_y] = \frac{1}{2\hbar eB} (\Pi_x^2 + \Pi_y^2) - \frac{1}{2}
+\end{equation}
+
+
+The cyclotron frequency of the electron is $\omega_c = eB / m^*$. Therefore,
+\begin{equation}
+  H = \frac{1}{2m^*} (\Pi_x^2 + \Pi_y^2) = \frac{2\hbar eB}{2m^*}\left(a^\dagger a + \frac{1}{2}\right) = \hbar \omega_c \left( a^\dagger a + \frac{1}{2} \right)
+\end{equation}
+
+Define a number operator $n = a^\dagger a$ (which is an Hermitian operator, $(a^\dagger a)^\dagger = a^\dagger a$). Using the commutation relation defined above, one can show that $a$ and $a^\dagger$ satisfies the commutation relation of lowering and raising operators:
+\begin{equation}
+  [n, a] = [a^\dagger a, a] = -a,\qquad [n, a^\dagger] = [a^\dagger a, a^\dagger] = a^\dagger
+\end{equation}
+
+Let $W_\lambda$ be the eigenspace of $n$ associated with eigenvalue $\lambda$. Then, for any $\ket{\psi} \in W_{\lambda^*}$,
+\begin{gather}
+  n a \ket{\psi} = (a n - a) \ket{\psi} = (\lambda^* - 1) a \ket{\psi} \implies a \ket{\psi} \in W_{\lambda^* - 1} \\
+  n a^\dagger \ket{\psi} = (a^\dagger n + a^\dagger) \ket{\psi} = (\lambda^* + 1) a^\dagger \ket{\psi} \implies a^\dagger \ket{\psi} \in W_{\lambda^* + 1}
+\end{gather}
+
+Also, for any state $\ket{\psi}$ of the Hilbert space,
+\begin{equation}
+  \bra{\psi} n \ket{\psi} = \bra{\psi} a^\dagger a \ket{\psi} = \| a \ket{\psi} \|^2 \geq 0
+\end{equation}
+
+Hence, for any nonzero eigenstate $\ket{\psi}$ of $n$ with eigenvalue $\lambda$, there exists a non-negative integer $k$ such that
+\begin{equation}
+  a^k\ket{\psi} = 0
+\end{equation}
+If not, then we can keep applying $a$ to $\ket{\psi}$ and get a state with negative eigenvalue, which contradicts to the fact $\bra{\psi}(a^k)^\dagger n a^k\ket{\psi} \geq 0$. Let $k^*$ be the minimal non-negative integer such that $a^{k^*} \ket{\psi} = 0$. Then, $a^{k^* - 1} \ket{\psi}$ is an nonzero eigenstate of $n = a^\dagger a$ with eigenvalue $0=\lambda - (k^* - 1)$
+\begin{equation}
+  n a^{k^* - 1} \ket{\psi} = a^\dagger a a^{k^* - 1} \ket{\psi} = a^\dagger(a^{k^*} \ket{\psi}) = 0.
+\end{equation}
+
+Therefore, $\lambda = k^* - 1$ is a non-negative integer.
+
+Above proves that any eigenvalue of $n$ is a non-negative integer. Conversely, we need to show that for any non-negative integer $n$ can be an eigenvalue of $n$. To do that, assume that $\ket{0}$ is a nonzero eigenstate of $n$ with eigenvalue $0$. Problem $(c)$ shows that such $\ket{0}$ exists. Then, for any non-negative integer $N$, $(a^\dagger)^N \ket{0}$ is an eigenstate of $n$ with eigenvalue $N$ and is nonzero:
+\begin{align}
+  \| (a^\dagger)^N \ket{0}\|^2 = \bra{0} a^N (a^\dagger)^N \ket{0} = N! \bra{0} 0 \rangle > 0 \label{eq:norm-n}
+\end{align}
+For the last equality below formula is used repeatedly:
+\begin{gather}
+  [a, (a^\dagger)^N] = \sum_{j=1}^{N}(a^\dagger)^{j-1}[a, a^\dagger](a^\dagger)^{N-j} = N(a^{\dagger})^{N-1} \label{eq:comm-a-adaggerN}\\
+  a (a^\dagger)^N \ket{0} = (a^\dagger)^N a \ket{0} + [a, (a^\dagger)^N] \ket{0} = N (a^\dagger)^{N-1} \ket{0}
+\end{gather}
+
+Hence, the energy eigenvalues are
+\begin{equation}
+  E_n = \hbar \omega_c \left( n + \frac{1}{2} \right),\qquad n = 0, 1, 2, \ldots
+\end{equation}
+
+if a ground state $\ket{0}$ exists.
+
+
+
+\subsection{(c)}
+
+The ground state $\ket{0}$ is annihilated by $a$,
+\begin{equation}
+  a \ket{0} = 0
+\end{equation}
+
+Using symmetric gauge $\mathbf{A} = \frac{B}{2}(-y, x)$, the annilation operator is
+\begin{equation}
+  a = \frac{1}{\sqrt{2\hbar eB}} \left( p_x - \frac{eB}{2}y - i p_y - i \frac{eB}{2}x \right) = -i\sqrt{\frac{\hbar}{2eB}} \left( \partial_x - i\partial_y + \frac{eB}{2\hbar}(x - iy) \right)
+\end{equation}
+
+Introduce complex coordinate 
+\begin{equation}
+  z = x - iy,\qquad \bar{z} = x + iy
+\end{equation}
+and Wirtinger derivatives
+\begin{equation}
+  \partial_z = \frac{1}{2}(\partial_x + i\partial_y),\qquad \partial_{\bar{z}} = \frac{1}{2}(\partial_x - i\partial_y)
+\end{equation}
+
+the equation $a \ket{0} = 0$ is equivalent to
+\begin{equation}
+  \left( \partial_{\bar{z}} + \frac{eB}{4\hbar} z \right) \psi_g(z, \bar{z}) = 0
+\end{equation}
+
+Define $\phi(z, \bar{z}) = e^{\frac{eB}{4\hbar}z\bar{z}}\psi_g(z, \bar{z})$. Then,
+\begin{equation}
+  \partial_{\bar{z}} \phi(z, \bar{z}) = e^{\frac{eB}{4\hbar}z\bar{z}} \left( \partial_{\bar{z}} + \frac{eB}{4\hbar} z \right) \psi_g(z, \bar{z}) = 0
+\end{equation}
+
+Hence, $\phi(z, \bar{z})$ is an holomorphic function of $z$. Therefore, the ground state wavefunction is
+\begin{equation}
+  \psi_g(z, \bar{z}) = f(z) e^{-\frac{eB}{4\hbar} z\bar{z}}
+\end{equation}
+where $f(z)$ is an arbitrary holomorphic function of $z$.
+
+From the fact that an entire function is uniquely determined by its Taylor coefficients, the following ground state wavefunction indexed by $m$ forms a complete basis of the ground state eigenspace:
+\begin{equation}
+  \psi_{g, m}(z, \bar{z}) = N_m z^m e^{-\frac{eB}{4\hbar} z\bar{z}},\qquad m = 0, 1, 2, \ldots
+\end{equation}
+Where $N_m$ is a normalization constant optained by
+\begin{gather}
+  N_m^{-2} = \int_{\mathbb{R}^2} |z|^{2m} e^{-\frac{eB}{2\hbar}|z|^2} dx dy = 2\pi \int_0^\infty r^{2m + 1} e^{-\frac{eB}{2\hbar}r^2} dr = \frac{2\pi m!}{(eB / 2\hbar)^{m + 1}} \\
+  \implies N_m = \sqrt{\frac{(eB / 2\hbar)^{m + 1}}{2\pi m!}}
+\end{gather}
+
+
+
+\subsection{(d)}
+
+
+Let $R_{m}$ be the root-mean-square radius of the wavefunction $\psi_{g, m}$, which is defined by
+\begin{equation}
+  R_m^2 = \int_{\mathbb{R}^2} |z|^2 |\psi_{g, m}(z, \bar{z})|^2 dx dy
+\end{equation}
+
+The magnetic flux through the disk of radius $R_m$ is
+\begin{equation}
+  \Phi_m = \pi B R_m^2 = \pi B \frac{(eB / 2\hbar)^{m + 1}}{2\pi m!}\int_0^\infty 2\pi r^{2m + 3} e^{-\frac{eB}{2\hbar}r^2} dr = (m + 1) \phi_0
+\end{equation}
+Where $\phi_0 = h / e$ is the magnetic flux quantum. Hence, there are $m + 1$ magnetic flux quanta through the disk of radius $R_m$.
+
+\subsection{(e)}
+
+The above results show that the ground state $\psi_{g, m}$ is localized around the circle of radius $R_m$. For a disk sample of radius $R$, the state $\psi_{g, m}$ with $R_m \lesssim  R$ survives while the state $\psi_{g, m}$ with $R_m > R$ is suppressed. Hence, the rough estimate of the degeneracy of the ground state is derived by the condition
+\begin{equation}
+  R_{m_\mathrm{max}} \approx R\implies m_\mathrm{max} \approx \frac{\pi B R^2}{\phi_0}
+\end{equation}
+Which means the number of flux quanta.
+
+
+\subsection{(f)}
+
+For the Landau gauge $\mathbf{A} = (0, Bx)$, the Hamiltonian is
+\begin{equation}
+  H = \frac{1}{2m^*} \left( p_x^2 + (p_y + eBx)^2 \right)
+\end{equation}
+
+For the Landau gauge, the syetem still has translation symmetry in $y$-direction. Hence, we can block-diagonalize the Hamiltonian by Fourier transform in $y$-direction.
+
+\begin{equation}
+  H(k_y) = \frac{1}{2m^*} \left( p_x^2 + (eBx + \hbar k_y)^2 \right)
+\end{equation}
+
+And this is the Hamiltonian of a 1D simple harmonic oscillator with the center of the potential at $x_0 = -\hbar k_y / eB$ and frequency $\omega_c = eB / m^*$. Hence, the energy eigenvalues are
+
+\begin{equation}
+  E_n = \hbar \omega_c \left( n + \frac{1}{2} \right),\qquad n = 0, 1, 2, \ldots
+\end{equation}
+
+and the ground state wavefunction up to normalization is
+\begin{equation}
+  \psi_{g, k_y}(x, y) \sim e^{i k_y y} e^{-\frac{(x - x_0)^2}{2l_B^2}}
+\end{equation}
+where $l_B = \sqrt{\hbar / eB}$.
+
+the density of states along $k_y$-direction is $d_y / 2\pi$ where $d_y$ is the length of the sample in $y$-direction. Also, the finite sample size in $x$-direction restricts the range of $k_y$ by $-eBd_x / 2\hbar \lesssim k_y \lesssim eBd_x / 2\hbar$. Hence, the degeneracy of the ground state is approximately
+\begin{equation}
+  \frac{d_y}{2\pi} \cdot \frac{eBd_x}{\hbar} = \frac{B d_x d_y}{\phi_0}
+\end{equation}
+
+This also means that the number of flux quanta through the sample is the degeneracy of the ground state.
+
+
+\section{Dirac fermions in a magnetic field}
+
+
+
+Start from the Hamiltonian of a 2D Dirac fermion in a magnetic field,
+\begin{equation}
+  H = v (\Pi_x\sigma_x + \Pi_y\sigma_y)
+\end{equation}
+
+Introduce same ladder operators as in problem 1,
+\begin{equation}
+  a = \frac{1}{\sqrt{2\hbar qB}} \left( \Pi_x \pm i\Pi_y \right),\qquad a^\dagger = \frac{1}{\sqrt{2\hbar qB}} \left( \Pi_x \mp i\Pi_y \right)
+\end{equation}
+
+The sign in the definition of $a$ and $a^\dagger$ depends on the sign of $qB$. For example, if $qB < 0$ the sign is chosen as same as in problem 1, while if $qB > 0$ the sign is chosen as opposite to that in problem 1. 
+
+With properly chosen sign, the ladder operators satisfy the commutation relation $[a, a^\dagger] = 1$ and the argument in problem 1 can be reused.
+
+Then, the Hamiltonian can be rewritten as
+\begin{equation}
+  H = v\sqrt{2\hbar qB} (a^\dagger \sigma_+ + a \sigma_-)
+\end{equation}
+Where $\sigma_\pm = (\sigma_x \pm i\sigma_y) / 2$ is the raising/lowering operator of the spin degree of freedom.
+
+Choose a normalized ground state $\ket{0}$ annihilated by $a$ and define $\ket{n}$ by
+\begin{equation}
+  \ket{n} = \frac{(a^\dagger)^n}{\sqrt{n!}} \ket{0}
+\end{equation}
+
+Then, $\ket{n}$ is normalized (Equation.~\ref{eq:norm-n}) eigenstate of $a^\dagger a$ and can be raised/lowered by $a^\dagger$ and $a$:
+\begin{align}
+  a \ket{n} &= \frac{1}{\sqrt{n!}} a (a^\dagger)^n \ket{0}\\
+  &= \frac{1}{\sqrt{n!}} \left( (a^\dagger)^n a + [a, (a^\dagger)^n] \right) \ket{0}\\
+  &= \sqrt{n} \ket{n - 1} \quad (\because \text{Equation~\ref{eq:comm-a-adaggerN}})\\
+  a^\dagger \ket{n} &= \frac{1}{\sqrt{n!}} a^\dagger (a^\dagger)^n \ket{0}\\
+  &= \frac{1}{\sqrt{n!}} (a^\dagger)^{n + 1} \ket{0} = \sqrt{n + 1} \ket{n + 1}
+\end{align}
+
+
+For $n \geq 1$, construct the following state
+\begin{equation}
+  \ket{n, \pm} = \frac{1}{\sqrt{2}} \left( \ket{n} \otimes \ket{\uparrow} \pm \ket{n - 1} \otimes \ket{\downarrow} \right)
+\end{equation}
+
+Then, $\ket{n, \pm}$ is an eigenstate of $H$ with eigenvalue $\pm v\sqrt{2\hbar qBn}$:
+\begin{align}
+  H \ket{n, \pm} &= v\sqrt{2\hbar qB} \left( a^\dagger \sigma_+ + a \sigma_- \right) \frac{1}{\sqrt{2}} \left( \ket{n - 1} \otimes \ket{\uparrow} \pm \ket{n} \otimes \ket{\downarrow} \right) \\
+  &= \frac{v\sqrt{2\hbar qB}}{\sqrt{2}} \left( a^\dagger \ket{n - 1} \otimes \ket{\downarrow} + a \ket{n} \otimes \ket{\uparrow} \right) = \pm v\sqrt{2\hbar qBn} \ket{n, \pm}
+\end{align}
+
+Also, the state $\ket{0} \otimes \ket{\uparrow}$ is an eigenstate of $H$ with eigenvalue $0$:
+\begin{equation}
+  H \ket{0} \otimes \ket{\uparrow} = v\sqrt{2\hbar qB} a \ket{0} \otimes \ket{\downarrow} = 0
+\end{equation}
+
+Hence, the energy spectrum includes $\pm v\sqrt{2\hbar qBn}$ for non-negative integer $n$.
+
+Considering $H^2$, 
+\begin{equation}
+  H^2 = 2\hbar qB v^2 \begin{pmatrix}
+  a^\dagger a & 0 \\
+  0 & a a^\dagger
+  \end{pmatrix} = 2\hbar qB v^2 \begin{pmatrix}
+  a^\dagger a & 0 \\
+  0 & a^\dagger a + 1
+  \end{pmatrix}
+\end{equation}
+
+The spectrum of $H^2$ is $2\hbar qB v^2 n$ for non-negative integer $n$. This implies that $\pm v\sqrt{2\hbar qBn}$ are the only possible eigenvalues of $H$. Hence, the spectrum of $H$ is $\pm v\sqrt{2\hbar qBn}$ for non-negative integer $n$.
+
+
+
+
+\end{document}

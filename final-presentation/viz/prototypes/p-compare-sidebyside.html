@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>P · 측정 vs 시뮬 나란히 비교</title>
+<link rel="stylesheet" href="../shared/style.css">
+<script src="../shared/embed.js"></script>
+</head>
+<body>
+<header>
+  <h1>P · 측정 ↔ 시뮬레이션 나란히 비교 (δG pajama plot)</h1>
+  <p>[프로토타입] 왼쪽 = 논문 측정(Fig 2 / Fig 3b에서 jet 역변환 추출), 오른쪽 = 같은 (B, δV_g) 창에서 돌린 모델. 같은 축·같은 컬러맵. 슬라이더로 모델 geometry를 측정에 맞춘다. · <a href="../index.html">← 통합 갤러리</a></p>
+</header>
+
+<div class="wrap">
+  <div class="plots">
+    <div class="card">
+      <div class="row" style="justify-content:space-between">
+        <h2 style="margin:0">측정 (좌) vs 모델 (우)</h2>
+        <div class="toggle"><button data-src="fig2" class="active">Fig 2 (phase slips)</button><button data-src="fig3b">Fig 3b (450 mT)</button></div>
+      </div>
+      <canvas id="cmp" width="1000" height="400"></canvas>
+      <p class="sub" id="cap">측정은 [-1,1]로 정규화된 추출값(절대 스케일 아님), 모델은 자체 진폭 기준 정규화 → 비교 대상은 줄무늬 주기·기울기·위상(절대 진폭 아님). Fig 3b의 δV_g 축은 근사값(눈금 미검출).</p>
+    </div>
+  </div>
+  <div class="controls">
+    <div class="card">
+      <h2>모델 geometry (측정에 맞추기)</h2>
+      <div class="slider"><label>A₀ <b id="v_A0">0.259</b> μm²</label>
+        <input id="s_A0" type="range" min="0.05" max="0.45" step="0.001" value="0.259"></div>
+      <div class="slider"><label>∂A/∂V_g <b id="v_dad">0.194</b> μm²/V</label>
+        <input id="s_dad" type="range" min="0.04" max="0.30" step="0.001" value="0.194"></div>
+      <div class="slider"><label>B_center <b id="v_Bc">8.870</b> T</label>
+        <input id="s_Bc" type="range" min="8.5" max="9.2" step="0.002" value="8.870"></div>
+      <div class="slider"><label>Δ_qp/E_c <b id="v_dqe">1.07</b></label>
+        <input id="s_dqe" type="range" min="0.2" max="3.5" step="0.01" value="1.07"></div>
+      <div class="slider"><label>α_bulk <b id="v_ab">0.100</b> mV⁻¹</label>
+        <input id="s_ab" type="range" min="0.0" max="0.18" step="0.002" value="0.100"></div>
+      <div class="slider"><label>온도 kT/E_c <b id="v_T">0.020</b></label>
+        <input id="s_T" type="range" min="-3.1" max="-0.7" step="0.01" value="-1.699"></div>
+      <button id="reset">프리셋으로 리셋</button>
+    </div>
+    <div class="card">
+      <h2>도출량</h2>
+      <div class="readout">
+        <div><span>모델 B-주기</span><b id="o_bp">–</b></div>
+        <div><span>모델 AB 기울기</span><b id="o_sl">–</b></div>
+        <div><span>모델 V_g-주기</span><b id="o_vp">–</b></div>
+        <div><span>측정 창 (B)</span><b id="o_ext">–</b></div>
+      </div>
+      <div class="sub" style="margin-top:8px">실측은 같은 물리소자라 A₀(=A_I)·∂A/∂V_g가 축소 geometry 기본값(0.098)보다 크다. Fig 2 FFT 프리셋: A₀≈0.259 μm², B-주기≈48 mT.</div>
+    </div>
+  </div>
+</div>
+
+<script src="data/measured.js"></script>
+<script src="../shared/physics.js"></script>
+<script src="../shared/render.js"></script>
+<script>
+"use strict";
+const el=id=>document.getElementById(id);
+const cv=el('cmp'), ctx=cv.getContext('2d');
+let SRC='fig2';
+const PRESET={
+  fig2: {A0:0.259,dad:0.194,Bc:8.870,dqe:1.07,ab:0.100,T:-1.699},
+  fig3b:{A0:0.259,dad:0.194,Bc:9.039,dqe:1.07,ab:0.100,T:-1.699}  // center of [8.682,9.396]
+};
+function curP(){
+  return {A0:parseFloat(el('s_A0').value)*1e-12, dad:parseFloat(el('s_dad').value)*1e-12,
+          dqe:parseFloat(el('s_dqe').value), Bc:parseFloat(el('s_Bc').value),
+          ab:parseFloat(el('s_ab').value), ratio:Math.pow(10,parseFloat(el('s_T').value))};
+}
+function axes(c,box,ext,xstep,ystep,xlabel,ylabel){
+  const x0=ext[0],x1=ext[1],y0=ext[2],y1=ext[3];
+  const X=B=>box.x+(B-x0)/(x1-x0)*box.w, Y=V=>box.y+(y1-V)/(y1-y0)*box.h;
+  c.strokeStyle='#888'; c.lineWidth=1; c.strokeRect(box.x,box.y,box.w,box.h);
+  c.fillStyle='#cbd3df'; c.font='11px sans-serif';
+  c.textAlign='center'; c.textBaseline='top';
+  for(let v=Math.ceil(x0/xstep)*xstep; v<=x1+1e-9; v+=xstep){ const x=X(v);
+    c.beginPath(); c.moveTo(x,box.y+box.h); c.lineTo(x,box.y+box.h+4); c.stroke(); c.fillText(v.toFixed(2),x,box.y+box.h+6); }
+  c.textAlign='right'; c.textBaseline='middle';
+  for(let v=Math.ceil(y0/ystep)*ystep; v<=y1+1e-9; v+=ystep){ const y=Y(v);
+    c.beginPath(); c.moveTo(box.x-4,y); c.lineTo(box.x,y); c.stroke(); c.fillText(v.toFixed(0),box.x-6,y); }
+  c.textAlign='center'; c.textBaseline='bottom'; c.fillText(xlabel,box.x+box.w/2,box.y+box.h+26);
+  c.save(); c.translate(box.x-34,box.y+box.h/2); c.rotate(-Math.PI/2); c.textAlign='center'; c.fillText(ylabel,0,0); c.restore();
+  return {X,Y};
+}
+function measBuf(panel){
+  const m=window.MEASURED[panel], hm=VZ.makeHeatmap(m.nx,m.ny);
+  VZ.paintHeatmap(hm,new Float32Array(m.dG),1,'div'); return {hm,m};
+}
+function render(){
+  const m=window.MEASURED[SRC]; const ext=m.extent; // [Bmin,Bmax,Vbot,Vtop]
+  const P=curP();
+  el('v_A0').textContent=(P.A0*1e12).toFixed(3); el('v_dad').textContent=(P.dad*1e12).toFixed(3);
+  el('v_Bc').textContent=P.Bc.toFixed(3); el('v_dqe').textContent=P.dqe.toFixed(2);
+  el('v_ab').textContent=P.ab.toFixed(3); el('v_T').textContent=P.ratio.toFixed(3);
+  // sim grid over measured window
+  const win={bmin:ext[0],bmax:ext[1],vtop:ext[3],vbot:ext[2]};
+  const g=FQH.grid(P,300,200,win);
+  const simHM=VZ.makeHeatmap(300,200); VZ.paintHeatmap(simHM,g.dG,g.vmax,'div');
+  const mb=measBuf(SRC);
+  // layout
+  ctx.fillStyle='#0c0e12'; ctx.fillRect(0,0,cv.width,cv.height);
+  const span=ext[1]-ext[0], xstep=span>0.5?0.2:0.1;
+  const L={x:54,y:14,w:390,h:330}, R={x:560,y:14,w:390,h:330};
+  ctx.imageSmoothingEnabled=true;
+  ctx.drawImage(mb.hm.buf,L.x,L.y,L.w,L.h); axes(ctx,L,ext,xstep,5,'B (T)','δV_g (mV)');
+  ctx.drawImage(simHM.buf,R.x,R.y,R.w,R.h); axes(ctx,R,ext,xstep,5,'B (T)','δV_g (mV)');
+  ctx.fillStyle='#cbd3df'; ctx.font='12px sans-serif'; ctx.textAlign='center';
+  ctx.fillText('measured ('+SRC+')',L.x+L.w/2,L.y-2); ctx.fillText('model',R.x+R.w/2,R.y-2);
+  VZ.colorbar(ctx,R.x+R.w+18,R.y,14,R.h,'-','+','δG');
+  // readouts
+  const d=FQH.derived(P);
+  el('o_bp').textContent=d.Bper.toFixed(0)+' mT'; el('o_sl').textContent=d.slope.toFixed(0)+' mV/T';
+  el('o_vp').textContent=d.Vper.toFixed(1)+' mV'; el('o_ext').textContent=ext[0].toFixed(2)+'–'+ext[1].toFixed(2)+' T';
+}
+function applyPreset(){ const p=PRESET[SRC];
+  el('s_A0').value=p.A0; el('s_dad').value=p.dad; el('s_Bc').value=p.Bc;
+  el('s_dqe').value=p.dqe; el('s_ab').value=p.ab; el('s_T').value=p.T; render(); }
+document.querySelectorAll('button[data-src]').forEach(b=>b.addEventListener('click',()=>{
+  document.querySelectorAll('button[data-src]').forEach(x=>x.classList.remove('active'));
+  b.classList.add('active'); SRC=b.dataset.src; applyPreset(); }));
+for(const id of ['s_A0','s_dad','s_Bc','s_dqe','s_ab','s_T']) el(id).addEventListener('input',render);
+el('reset').addEventListener('click',applyPreset);
+render();
+</script>
+</body>
+</html>

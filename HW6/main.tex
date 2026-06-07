@@ -1,0 +1,147 @@
+\documentclass[a4paper,11pt]{article}
+\usepackage{amsmath,amssymb,amsthm, tikz,titlesec,hyperref,esint,braket, graphicx, mathrsfs, enumitem}
+\usepackage[a4paper,margin=2cm]{geometry}
+\linespread{1.3}
+\newtheorem{claim}{Claim}[section]
+
+\newcommand\name{Park Chanwoo}   % Name of the student
+\newcommand\university{KAIST} % Name of the university
+\newcommand\department{Physics} % Name of the department
+\newcommand\studentid{20230297} % Student ID
+\newcommand\s{\,\;}
+
+
+\newenvironment{solution}[1]
+  {\renewcommand\qedsymbol{$\square$}\begin{proof}[\textbf{Solution#1}]}
+  {\end{proof}}
+\newenvironment{note}
+  {\renewcommand\qedsymbol{$\blacksquare$}\begin{proof}[\textnormal{\textbf{note}}]}
+  {\end{proof}}
+
+\title{KAIST\\2026 Special Topics in Physics quantum Electronic Devices I: Interferometers and Fractional Particles\\
+Homework 6\bigskip}
+\author{\textbf{\Large \name} \\
+% University: \university\\
+Department: \department\\
+Student ID: \studentid}
+\date{\today}
+
+\begin{document}
+\thispagestyle{empty}
+\maketitle
+\tableofcontents
+\titleformat{\section}[frame]{\pagebreak}{\filright
+\footnotesize  \enspace \textsf{KAIST --- Interferometers and Fractional Particles 2026 Spring}\enspace}{6pt}{\Large\bfseries\filcenter}
+\setcounter{secnumdepth}{1}
+\setcounter{tocdepth}{2}
+
+\newcommand{\tr}{\operatorname{tr}}
+\newcommand{\sgn}{\operatorname{sgn}}
+\newcommand{\supp}{\operatorname{supp}}
+\renewcommand{\Re}{\operatorname{Re}}
+\renewcommand{\Im}{\operatorname{Im}}
+\newcommand{\boltz}{k_{\mathrm{B}}}
+
+\section{Kac Moody commutation relation}
+
+Start from
+\begin{equation}
+  n_{R,q} = \sum_k :c^\dagger_{R,k+q}c_{R,k}: \qquad n_{R,-q} = \sum_k :c^\dagger_{R,k-q}c_{R,k}:
+\end{equation}
+
+since the contracted term does not affect to the commutator ($[A + c, B] = [A, B] + [c, B] = [A, B]$ for any complex number $c$), the commutator can be calculated by:
+\begin{equation}
+  [n_{R,-q}, n_{R,q}] = \sum_{k, k'} [c^\dagger_{R,k-q}c_{R,k}, c^\dagger_{R,k'+q}c_{R,k'}].
+\end{equation}
+Apply the identity
+\begin{equation}
+  [AB, CD] = A\{B, C\}D  - AC\{B, D\} + \{A, C\}DB - C\{A, D\}B
+\end{equation}
+with $A = c^\dagger_{R,k-q}, B = c_{R,k}, C = c^\dagger_{R,k'+q}, D = c_{R,k'}$.
+
+The anticommutators are:
+\begin{gather}
+  \{B, C\} = \{c_{R,k}, c^\dagger_{R,k'+q}\} = \delta_{k, k'+q},\\
+  \{B, D\} = \{c_{R,k}, c_{R,k'}\} = 0,\\
+  \{A, C\} = \{c^\dagger_{R,k-q}, c^\dagger_{R,k'+q}\} = 0,\\
+  \{A, D\} = \{c^\dagger_{R,k-q}, c_{R,k'}\} = \delta_{k-q, k'}.
+\end{gather}
+
+Gathering the terms survive,
+\begin{align}
+  [n_{R,-q}, n_{R,q}] &= \sum_{k, k'} [\delta_{k, k'+q} c^\dagger_{R,k-q} c_{R,k'} -\delta_{k-q, k'} c^\dagger_{R,k'+q} c_{R,k}]\\
+  &= \sum_{k} [c^\dagger_{R,k-q} c_{R,k-q} - c^\dagger_{R,k} c_{R,k}]
+\end{align}
+
+To resolve $\infty-\infty$ problem, separate the operators into normal ordered part and ground state expectation value:
+\begin{equation}
+  [n_{R,-q}, n_{R,q}] = \sum_{k} [:c^\dagger_{R,k-q} c_{R,k-q}: - :c^\dagger_{R,k} c_{R,k}:] + \sum_k [\langle c^\dagger_{R,k-q} c_{R,k-q}\rangle_0 - \langle c^\dagger_{R,k} c_{R,k}\rangle_0].
+\end{equation}
+
+Since the first term converges absolutely, shift the terms and compensate term-by-term. After that,
+\begin{equation}
+  [n_{R,-q}, n_{R,q}] = \sum_k [\langle c^\dagger_{R,k-q} c_{R,k-q}\rangle_0 - \langle c^\dagger_{R,k} c_{R,k}\rangle_0] = \sum_k (n_{k-q}^0 - n_k^0)
+\end{equation}
+
+Since the ground state of non-interacting fermions is fermi sea, $n_k^0 = \Theta(k_F - k)$. For large or small enough $k$, the term $n_{k-q}^0 - n_k^0$ is zero because both $n_{k-q}^0$ and $n_k^0$ are zero or one respectively. For simplicity, assume $q > 0$. The only non-zero contribution comes from the region near Fermi points, where $n_{k-q}^0 - n_k^0$ is one for $k -q  < k_F$ and $k > k_F$. The sum is given by the number of $k \in \frac{L}{2\pi}\mathbb{Z}/L\mathbb{Z}$. Since the length of the region $k_F < k < k_F + q$ is $q$, the number of $k$ in the region is $\frac{L}{2\pi}q$. Hence, we get
+\begin{equation}
+  [n_{R,-q}, n_{R,q}] = \frac{qL}{2\pi}.
+\end{equation}
+
+For $q < 0$, the region with non-zero contribution is $k_F + q < k < k_F$, same length as the previous case, so we get the same result.
+
+
+\section{1D periodic tight-binding chain}
+
+\subsection{(2a)}
+
+Consider 1D periodic tight-binding chain with $L$ sites. The Hamiltonian is given by
+\begin{eqnarray}
+  H = \epsilon_0\sum_{i=0}^{L} c_i^\dagger c_i - t \sum_{i=0}^{L} (c_i^\dagger c_{i+1} + c_{i+1}^\dagger c_i),
+\end{eqnarray}
+the periodic boundary condition is imposed, i.e., $c_{L+1} = c_1$. 
+
+Since the system has lattice translation symmetry, it is useful to perform Fourier transformation:
+\begin{eqnarray}
+  c_k^\dagger = \frac{1}{\sqrt{L}} \sum_{j=0}^{L} e^{ikj} \tilde{c}_j^\dagger, \quad k \in \frac{2\pi}{L}\mathbb{Z}/L\mathbb{Z}
+\end{eqnarray}
+
+Explicitly, the transformation is given by
+\begin{align}
+  \sum_{i=0}^{L} c_i^\dagger c_i &= \sum_{i=0}^{L} \sum_{k, k'} \frac{1}{L} e^{i(k-k')i} \tilde{c}_k^\dagger \tilde{c}_{k'} = \sum_{k} \tilde{c}_k^\dagger \tilde{c}_k,\\
+  \sum_{i=0}^{L} c_i^\dagger c_{i+1} &= \sum_{i=0}^{L} \sum_{k, k'} \frac{1}{L} e^{i(k-k')i} e^{-ik'} \tilde{c}_k^\dagger \tilde{c}_{k'} = \sum_{k} e^{-ik} \tilde{c}_k^\dagger \tilde{c}_k.
+\end{align}
+
+Hence, the Hamiltonian can be written as
+\begin{eqnarray}
+  H = \sum_{k} (\epsilon_0 - 2t\cos k) \tilde{c}_k^\dagger \tilde{c}_k.
+\end{eqnarray}
+
+This gives the dispersion relation 
+\begin{eqnarray}
+  E_k = \epsilon_0 - 2t\cos k.
+\end{eqnarray}
+and coefficients
+\begin{eqnarray}
+  \alpha_{kj} = \frac{1}{\sqrt{L}} e^{-ikj}.
+\end{eqnarray}
+The $k\in \frac{2\pi}{L}\mathbb{Z}/L\mathbb{Z}$ means the lattice momentum of the particle created by $\tilde{c}_k^\dagger$.
+
+For the limit $N_e \ll L$, The dispersion relation on the region including Fermi points $k_F$ and $-k_F$ can be approximated by quadratic dispersion relation:
+\begin{eqnarray}
+  E_k = \epsilon_0 - 2t\cos k \approx \epsilon_0 - 2t + t k^2.
+\end{eqnarray}
+
+\subsection{(2b)}
+
+The ground state of the fermionic many-body system is given by filling the single-particle states with lowest energy. For spin-1/2 case, there are two degenerate states for each momentum $k$. Hence, for a five-particle system, there are four degenerate ground states, which are formed by placing two particles at $k=0$ and distributing the remaining three particles among the four available states with $k=\pm\frac{2\pi}{L}$ and $\sigma=\uparrow,\downarrow$. Their ground state energy is given by
+\begin{equation}
+  E_0 = 5\epsilon_0 - 4t - 6t\cos\frac{2\pi}{L} \approx 5\epsilon_0 - 10t + \frac{12\pi^2 t}{L^2}.
+\end{equation}
+
+And the first excited state is $4\times 6 = 24$-fold degenerate, which is formed by placing two particles at $k=0$, two particles at $k=\pm\frac{2\pi}{L}$, and the remaining particle at $k=\pm\frac{4\pi}{L}$ with $\sigma=\uparrow,\downarrow$. The energy of the first excited state is given by
+\begin{equation}
+  E_1 = 5\epsilon_0 - 4t - 4t\cos\frac{2\pi}{L} - 2t\cos\frac{4\pi}{L} \approx 5\epsilon_0 - 10t + \frac{24\pi^2 t}{L^2}.
+\end{equation}
+
+\end{document}

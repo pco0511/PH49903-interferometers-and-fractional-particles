@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>P · 십자선 슬라이스 뷰어 (가로/세로 컷 + 기울기 주석)</title>
+<link rel="stylesheet" href="../shared/style.css">
+<style>
+  .hint{color:#8a93a3;font-size:12px;margin:2px 0 0}
+  canvas{cursor:crosshair}
+</style>
+</head>
+<body>
+<header>
+  <h1>P · 십자선 슬라이스 뷰어 — δG(B, δV_g)</h1>
+  <p>[프로토타입] heatmap 위 십자선을 끌면(또는 슬라이더로) 가로컷(δG vs B, δV_g 고정)과 세로컷(δG vs δV_g, B 고정)이 동시에 갱신된다. 기울기 주석: <b style="color:#7fe0ff">음의 등위상선</b>(연속 AB 항)과 <b style="color:#ff9a52">양의 phase-jump 절단면</b>(이산 anyon 항). · <a href="../index.html">← 통합 갤러리</a></p>
+</header>
+
+<div class="wrap">
+  <div class="plots">
+    <div class="card">
+      <h2>δG 맵 — 클릭/드래그로 십자선 이동</h2>
+      <canvas id="map" width="820" height="360"></canvas>
+    </div>
+    <div class="card">
+      <h2>가로컷  δG vs B   @ δV_g = <b id="lab_v">–</b> mV</h2>
+      <canvas id="cutH" width="820" height="160"></canvas>
+    </div>
+    <div class="card">
+      <h2>세로컷  δG vs δV_g   @ B = <b id="lab_b">–</b> T</h2>
+      <canvas id="cutV" width="820" height="160"></canvas>
+    </div>
+  </div>
+  <div class="controls">
+    <div class="card">
+      <h2>십자선 위치</h2>
+      <div class="slider"><label>B <b id="v_B">8.65</b> T</label>
+        <input id="s_B" type="range" min="8.2" max="9.1" step="0.002" value="8.653"></div>
+      <div class="slider"><label>δV_g <b id="v_V">-15</b> mV</label>
+        <input id="s_V" type="range" min="-30" max="0" step="0.1" value="-15"></div>
+      <div class="slider"><label>온도 kT/E_c <b id="v_T">0.020</b></label>
+        <input id="s_T" type="range" min="-3.1" max="-0.7" step="0.01" value="-1.699"></div>
+      <label style="display:block;margin-top:8px"><input id="c_slope" type="checkbox" checked> 기울기 주석 표시</label>
+      <p class="hint">맵을 클릭하거나 드래그해도 십자선이 움직입니다.</p>
+    </div>
+    <div class="card">
+      <h2>기울기 / 주기</h2>
+      <div class="readout">
+        <div><span>음의 등위상선 기울기 (AB)</span><b id="o_ab">–</b></div>
+        <div><span>양의 jump 절단면 기울기</span><b id="o_tr">–</b></div>
+        <div><span>가로컷 B-주기</span><b id="o_bp">–</b></div>
+        <div><span>세로컷 V_g-주기</span><b id="o_vp">–</b></div>
+        <div><span>십자선 ⟨N_qp⟩</span><b id="o_n">–</b></div>
+      </div>
+      <div class="sub" style="margin-top:8px">AB 항은 (B,δV_g) 평면에서 음의 기울기 줄무늬, anyon 점프는 양의 기울기 절단선을 이룬다. ν=1/3, 축소 geometry(A₀=0.098 μm²) 기본값.</div>
+    </div>
+  </div>
+</div>
+
+<script src="../shared/physics.js"></script>
+<script src="../shared/render.js"></script>
+<script>
+"use strict";
+const el=id=>document.getElementById(id);
+const map=el('map'), mc=map.getContext('2d');
+const cutH=el('cutH'), hc=cutH.getContext('2d');
+const cutV=el('cutV'), vc=cutV.getContext('2d');
+const NB=320, NV=200;
+const WIN={bmin:8.2,bmax:9.1,vtop:0,vbot:-30};
+const P0={A0:0.098e-12,dad:0.120e-12,dqe:1.07,Bc:8.653,ab:0.100,ratio:0.02};
+const hm=VZ.makeHeatmap(NB,NV);
+const BOX={x:54,y:14,w:670,h:316};                 // heatmap plot box (shared X with cutH)
+const BOXH={x:54,y:14,w:670,h:116};
+const BOXV={x:54,y:14,w:670,h:116};
+let Bsel=8.653, Vsel=-15, cacheR=null, cacheG=null;
+
+function P(){ return Object.assign({},P0,{ratio:Math.pow(10,parseFloat(el('s_T').value))}); }
+
+function ensureGrid(){
+  const r=parseFloat(el('s_T').value);
+  if(r!==cacheR){ cacheG=FQH.grid(P(),NB,NV,WIN); cacheR=r; }
+  return cacheG;
+}
+// line helper: dG vs B at fixed Vg
+function lineVsB(Vg,pp,n){
+  const Pn=FQH.norm(pp), B=new Float64Array(n), g=new Float64Array(n);
+  for(let i=0;i<n;i++){ const b=WIN.bmin+(WIN.bmax-WIN.bmin)*i/(n-1); B[i]=b; g[i]=FQH.point(b,Vg,Pn).dG; }
+  return {B:B,dG:g};
+}
+function period(xs,ys,minamp){
+  const pk=[]; for(let i=1;i<ys.length-1;i++) if(ys[i]>ys[i-1]&&ys[i]>=ys[i+1]&&ys[i]>minamp) pk.push(xs[i]);
+  if(pk.length<2) return null; let s=0; for(let i=1;i<pk.length;i++) s+=Math.abs(pk[i]-pk[i-1]);
+  return s/(pk.length-1);
+}
+
+function drawMap(){
+  const g=ensureGrid();
+  VZ.paintHeatmap(hm,g.dG,g.vmax,'div');
+  mc.fillStyle='#0c0e12'; mc.fillRect(0,0,map.width,map.height);
+  mc.imageSmoothingEnabled=true; mc.drawImage(hm.buf,BOX.x,BOX.y,BOX.w,BOX.h);
+  const m=VZ.frame(mc,BOX,{xr:[8.2,9.1],yr:[-30,0],xstep:0.1,ystep:5,xlabel:'B (T)',ylabel:'δV_g (mV)'});
+  VZ.colorbar(mc,BOX.x+BOX.w+18,BOX.y,14,BOX.h,(-g.vmax).toFixed(2),g.vmax.toFixed(2),'δG');
+  // slope annotation lines through crosshair
+  if(el('c_slope').checked){
+    const d=FQH.derived(P());
+    drawSlopeLine(m,d.slope,'#7fe0ff');       // negative AB iso-phase
+    drawSlopeLine(m,d.transSlope,'#ff9a52');  // positive jump cross-section
+  }
+  // crosshair
+  mc.save(); mc.beginPath(); mc.rect(BOX.x,BOX.y,BOX.w,BOX.h); mc.clip();
+  mc.strokeStyle='#ffffff'; mc.lineWidth=1.2; mc.setLineDash([4,3]);
+  mc.beginPath(); mc.moveTo(m.X(Bsel),BOX.y); mc.lineTo(m.X(Bsel),BOX.y+BOX.h);
+  mc.moveTo(BOX.x,m.Y(Vsel)); mc.lineTo(BOX.x+BOX.w,m.Y(Vsel)); mc.stroke(); mc.setLineDash([]);
+  mc.fillStyle='#fff'; mc.beginPath(); mc.arc(m.X(Bsel),m.Y(Vsel),3.5,0,7); mc.fill(); mc.restore();
+  return m;
+}
+function drawSlopeLine(m,slope,col){
+  // Vg = Vsel + slope*(B - Bsel), drawn across the box, clipped
+  mc.save(); mc.beginPath(); mc.rect(BOX.x,BOX.y,BOX.w,BOX.h); mc.clip();
+  mc.strokeStyle=col; mc.lineWidth=2; mc.globalAlpha=0.9;
+  const b0=8.2,b1=9.1; const v0=Vsel+slope*(b0-Bsel), v1=Vsel+slope*(b1-Bsel);
+  mc.beginPath(); mc.moveTo(m.X(b0),m.Y(v0)); mc.lineTo(m.X(b1),m.Y(v1)); mc.stroke();
+  mc.restore();
+}
+function drawCutH(){
+  const L=lineVsB(Vsel,P(),320);
+  hc.fillStyle='#0c0e12'; hc.fillRect(0,0,cutH.width,cutH.height);
+  let amax=0.01; for(const d of L.dG) amax=Math.max(amax,Math.abs(d));
+  const X=b=>BOXH.x+(b-8.2)/0.9*BOXH.w, Y=d=>BOXH.y+(amax-d)/(2*amax)*BOXH.h;
+  hc.strokeStyle='#333'; hc.beginPath(); hc.moveTo(BOXH.x,Y(0)); hc.lineTo(BOXH.x+BOXH.w,Y(0)); hc.stroke();
+  hc.strokeStyle='#7fe0ff'; hc.lineWidth=1.8; hc.beginPath();
+  for(let i=0;i<L.B.length;i++){ const x=X(L.B[i]),y=Y(L.dG[i]); i?hc.lineTo(x,y):hc.moveTo(x,y);} hc.stroke();
+  // crosshair B marker
+  hc.strokeStyle='#fff'; hc.setLineDash([4,3]); hc.beginPath(); hc.moveTo(X(Bsel),BOXH.y); hc.lineTo(X(Bsel),BOXH.y+BOXH.h); hc.stroke(); hc.setLineDash([]);
+  VZ.frame(hc,BOXH,{xr:[8.2,9.1],yr:[-amax,amax],xstep:0.1,ystep:amax,xlabel:'B (T)',ylabel:'δG',yfmt:v=>v.toFixed(2)});
+  el('o_bp').textContent=(()=>{const p=period(L.B,L.dG,0.05*amax);return p?(p*1e3).toFixed(0)+' mT':'—';})();
+}
+function drawCutV(){
+  const L=FQH.lineVsVg(Bsel,P(),300,{vtop:0,vbot:-30});
+  vc.fillStyle='#0c0e12'; vc.fillRect(0,0,cutV.width,cutV.height);
+  let amax=0.01; for(const d of L.dG) amax=Math.max(amax,Math.abs(d));
+  const X=v=>BOXV.x+(v-(-30))/30*BOXV.w, Y=d=>BOXV.y+(amax-d)/(2*amax)*BOXV.h;
+  vc.strokeStyle='#333'; vc.beginPath(); vc.moveTo(BOXV.x,Y(0)); vc.lineTo(BOXV.x+BOXV.w,Y(0)); vc.stroke();
+  vc.strokeStyle='#ff9a52'; vc.lineWidth=1.8; vc.beginPath();
+  for(let i=0;i<L.Vg.length;i++){ const x=X(L.Vg[i]),y=Y(L.dG[i]); i?vc.lineTo(x,y):vc.moveTo(x,y);} vc.stroke();
+  vc.strokeStyle='#fff'; vc.setLineDash([4,3]); vc.beginPath(); vc.moveTo(X(Vsel),BOXV.y); vc.lineTo(X(Vsel),BOXV.y+BOXV.h); vc.stroke(); vc.setLineDash([]);
+  VZ.frame(vc,BOXV,{xr:[-30,0],yr:[-amax,amax],xstep:5,ystep:amax,xlabel:'δV_g (mV)',ylabel:'δG',yfmt:v=>v.toFixed(2)});
+  el('o_vp').textContent=(()=>{const p=period(L.Vg,L.dG,0.05*amax);return p?p.toFixed(1)+' mV':'—';})();
+}
+function render(){
+  Bsel=parseFloat(el('s_B').value); Vsel=parseFloat(el('s_V').value);
+  el('v_B').textContent=Bsel.toFixed(3); el('v_V').textContent=Vsel.toFixed(1);
+  el('v_T').textContent=Math.pow(10,parseFloat(el('s_T').value)).toFixed(3);
+  el('lab_v').textContent=Vsel.toFixed(1); el('lab_b').textContent=Bsel.toFixed(3);
+  const d=FQH.derived(P());
+  el('o_ab').textContent=d.slope.toFixed(0)+' mV/T'; el('o_tr').textContent='+'+d.transSlope.toFixed(0)+' mV/T';
+  el('o_n').textContent=FQH.point(Bsel,Vsel,FQH.norm(P())).N.toFixed(2);
+  drawMap(); drawCutH(); drawCutV();
+}
+// rAF coalescer so dragging doesn't fire render() (~620 point() calls) per mousemove
+let pending=false;
+function schedule(){ if(pending) return; pending=true; requestAnimationFrame(()=>{ pending=false; render(); }); }
+// drag/click on map
+function pick(ev){
+  const r=map.getBoundingClientRect();
+  const px=(ev.clientX-r.left)*map.width/r.width, py=(ev.clientY-r.top)*map.height/r.height;
+  let b=8.2+(px-BOX.x)/BOX.w*0.9; let v=0-(py-BOX.y)/BOX.h*30;
+  b=Math.max(8.2,Math.min(9.1,b)); v=Math.max(-30,Math.min(0,v));
+  el('s_B').value=b; el('s_V').value=v; schedule();
+}
+let dragging=false;
+map.addEventListener('mousedown',e=>{dragging=true;pick(e);});
+window.addEventListener('mousemove',e=>{if(dragging)pick(e);});
+window.addEventListener('mouseup',()=>{dragging=false;});
+for(const id of ['s_B','s_V','s_T']) el(id).addEventListener('input',schedule);
+el('c_slope').addEventListener('change',render);
+render();
+</script>
+</body>
+</html>

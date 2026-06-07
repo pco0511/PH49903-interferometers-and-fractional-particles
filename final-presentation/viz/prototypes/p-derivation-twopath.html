@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>P · 두 경로 backscattering 간섭 (실제 소자)</title>
+<link rel="stylesheet" href="../shared/style.css">
+<script src="../shared/embed.js"></script>
+</head>
+<body>
+<header>
+  <h1>P · 두 경로 backscattering 간섭 → 전도도 (실제 소자, Fig 1b)</h1>
+  <p>[프로토타입] 실제 소자(svg/device_design.svg) 위에서: 입사 chiral edge가 <b style="color:#4ea1ff">QPC1(r₁)</b>·<b style="color:#ff9a52">QPC2(r₂)</b>에서 backscatter된다. r₂ 경로는 chamber 면적 A_I와 내부 quasiparticle을 둘러싸 위상 θ = θ_AB(∝B·A_I) + N·θ_anyon을 얻는다. R=|r₁+r₂e<sup>iθ</sup>|², G=G₀(1−R) → 진동하는 δG ∝ cos θ (부호·진폭은 δG₀에 흡수; 논문 식 1). · <a href="../index.html">← 통합 갤러리</a></p>
+</header>
+
+<div class="wrap">
+  <div class="plots">
+    <div class="card">
+      <h2>실제 소자 위 두 경로 간섭 (전류 흐름 애니메이션)</h2>
+      <canvas id="dev" width="600" height="440"></canvas>
+    </div>
+    <div class="card">
+      <h2>δG ∝ cos θ   vs   B</h2>
+      <canvas id="tr" width="320" height="440"></canvas>
+    </div>
+  </div>
+  <div class="controls">
+    <div class="card">
+      <h2>제어</h2>
+      <div class="slider"><label>자기장 B <b id="v_B">8.650</b> T</label>
+        <input id="s_B" type="range" min="8.60" max="8.75" step="0.0005" value="8.650"></div>
+      <div class="slider"><label>둘러싼 quasiparticle N_qp <b id="v_N">1</b></label>
+        <input id="s_N" type="range" min="0" max="4" step="1" value="1"></div>
+      <div class="slider"><label>backscatter 비 r₂/r₁ <b id="v_r">0.6</b></label>
+        <input id="s_r" type="range" min="0.05" max="1" step="0.01" value="0.6"></div>
+      <div class="row" style="margin-top:6px">
+        <button id="play">⏸ 흐름 정지</button>
+        <div class="toggle"><button data-nu="third" class="active">ν=1/3</button><button data-nu="one">ν=1</button></div>
+      </div>
+    </div>
+    <div class="card">
+      <h2>값</h2>
+      <div class="readout">
+        <div><span>θ_AB</span><b id="o_ab">–</b></div>
+        <div><span>N·θ_anyon</span><b id="o_an">–</b></div>
+        <div><span>θ_total</span><b id="o_tot">–</b></div>
+        <div><span>R = |r₁+r₂e^{iθ}|²</span><b id="o_R">–</b></div>
+      </div>
+      <div class="sub">전도도 G = G₀(1−R)</div>
+      <div style="height:10px;background:#222834;border-radius:5px;margin-top:6px;overflow:hidden">
+        <div id="bar" style="height:100%;width:50%;background:#4ea1ff"></div></div>
+      <div class="sub" style="margin-top:8px">N_qp가 1 늘면 θ가 θ_anyon(ν=1/3: 2π/3, ν=1: 2π)만큼 점프 → δG 곡선 이동(phase slip). ν=1은 2π라 곡선 그대로.</div>
+    </div>
+  </div>
+</div>
+
+<script src="../shared/physics.js"></script>
+<script>
+"use strict";
+const el=id=>document.getElementById(id);
+const dev=el('dev'), dc=dev.getContext('2d');
+const tr=el('tr'), tc=tr.getContext('2d');
+const TAU=2*Math.PI, PHI0=FQH.PHI0, ESTAR=FQH.ESTAR, AI=0.38e-12;   // real chamber area ~0.38 um^2
+let playing=true, nu='third', flow=0, last=null;
+function thAnyon(){ return nu==='third'? TAU/3 : TAU; }
+function thAB(B){ return TAU*ESTAR*AI*B/PHI0; }
+function vals(){ const B=parseFloat(el('s_B').value), N=parseInt(el('s_N').value), r=parseFloat(el('s_r').value);
+  return {B,N,r,ab:thAB(B),an:N*thAnyon(),th:thAB(B)+N*thAnyon()}; }
+
+// ---- device geometry from svg/device_design.svg (raw coords, same as B1) ------
+const RX0=918, RY0=1289, RW=1412, RH=951;
+const GATES=[
+ "M1183.01 1820 1245.99 1820C1265.33 1820 1281 1835.67 1281 1855.01L1281 2237 1148 2237 1148 1855.01C1148 1835.67 1163.67 1820 1183.01 1820Z",
+ "M2012.74 1820 2075.26 1820C2094.44 1820 2110 1835.56 2110 1854.74L2110 2237 1978 2237 1978 1854.74C1978 1835.56 1993.56 1820 2012.74 1820Z",
+ "M1343.38 2146C1323.29 2146 1307 2129.71 1307 2109.62L1307 2050.38C1307 2030.29 1323.29 2014 1343.38 2014L1913.62 2014C1933.71 2014 1950 2030.29 1950 2050.38L1950 2109.62C1950 2129.71 1933.71 2146 1913.62 2146Z",
+ "M1540 2146L1719 2146L1719 2238L1540 2238Z",
+ "M2075.26 1707 2012.74 1707C1993.56 1707 1978 1691.44 1978 1672.26L1978 1290 2110 1290 2110 1672.26C2110 1691.44 2094.44 1707 2075.26 1707Z",
+ "M1245.99 1707 1183.01 1707C1163.67 1707 1148 1691.33 1148 1671.99L1148 1290 1281 1290 1281 1671.99C1281 1691.33 1265.33 1707 1245.99 1707Z",
+ "M1915.62 1382C1935.71 1382 1952 1398.29 1952 1418.38L1952 1477.62C1952 1497.71 1935.71 1514 1915.62 1514L1345.38 1514C1325.29 1514 1309 1497.71 1309 1477.62L1309 1418.38C1309 1398.29 1325.29 1382 1345.38 1382Z",
+ "M1539 1289L1719 1289L1719 1382L1539 1382Z"
+].map(d=>new Path2D(d));
+const EDGE=new Path2D("M925.5 1304.56 1092.14 1304.72C1119.28 1304.07 1139.47 1311.39 1138.46 1344.91 1137.45 1378.42 1129.13 1596.85 1136.17 1659.34 1143.21 1721.84 1161.73 1717.96 1180.69 1719.87 1199.65 1721.78 1241.91 1722.41 1258.77 1721.02 1275.63 1719.62 1287.44 1702.81 1293.64 1676.07 1299.83 1649.34 1294.89 1586.46 1295.93 1560.6 1296.97 1534.74 1304.66 1527.85 1335.21 1526.81 1365.77 1525.77 1881.8 1526.21 1915.98 1526.65 1950.17 1527.09 1963.53 1541.6 1961.65 1567.82 1959.77 1594.03 1962.2 1645.54 1963.62 1672.14 1965.03 1698.74 1987.3 1712.95 2008.47 1721.51 2029.64 1730.07 2070.7 1725.45 2090.64 1723.48 2110.58 1721.51 2119.97 1723.53 2125.18 1662.46 2130.39 1601.39 2121.79 1385.92 2121.9 1357.05 2122.01 1328.18 2146.46 1307.4 2172.97 1306.2 2199.49 1305 2271.68 1304.28 2336.5 1304.56");
+const CL=1300, CR=1958, CT=1520, CB=2008;             // chamber interior
+const QPC1=[1215,1763], QPC2=[2044,1763];
+
+// ---- transform (same scheme as B1, targeting dc) -----------------------------
+let SC,OX,OY;
+function layout(){ const padL=72,padR=18,padT=58,padB=30;
+  SC=Math.min((dev.width-padL-padR)/RW,(dev.height-padT-padB)/RH); OX=padL; OY=padT; }
+function sx(rx){ return OX+(rx-RX0)*SC; }
+function sy(ry){ return OY+(ry-RY0)*SC; }
+function withTf(fn){ dc.save(); dc.translate(OX,OY); dc.scale(SC,SC); dc.translate(-RX0,-RY0); fn(); dc.restore(); }
+function strokeP(p,col,wpx,dash,off){ withTf(()=>{ dc.strokeStyle=col; dc.lineWidth=wpx/SC; dc.lineJoin='round'; dc.lineCap='round';
+  if(dash){ dc.setLineDash(dash.map(d=>d/SC)); dc.lineDashOffset=(off||0)/SC; } else dc.setLineDash([]); dc.stroke(p); }); }
+function fillP(p,col){ withTf(()=>{ dc.fillStyle=col; dc.fill(p); }); }
+function spiral(x,y,r){ dc.strokeStyle='#ff5a5a'; dc.lineWidth=2; dc.beginPath();
+  for(let t=0;t<=4*Math.PI;t+=0.25){ const rr=r*t/(4*Math.PI); const px=x+rr*Math.cos(t),py=y+rr*Math.sin(t); t?dc.lineTo(px,py):dc.moveTo(px,py);} dc.stroke();
+  dc.fillStyle='#ff5a5a'; dc.beginPath(); dc.arc(x,y,2,0,TAU); dc.fill(); }
+function fieldDot(rx,ry,r,al){ const x=sx(rx),y=sy(ry); dc.save(); dc.globalAlpha=al;
+  dc.strokeStyle='#7fd1ff'; dc.fillStyle='#7fd1ff'; dc.lineWidth=1.4;
+  dc.beginPath(); dc.arc(x,y,r,0,TAU); dc.stroke(); dc.beginPath(); dc.arc(x,y,r*0.22,0,TAU); dc.fill(); dc.restore(); }
+function roundRectPath(c,x,y,w,h,r){ c.beginPath(); c.moveTo(x+r,y); c.arcTo(x+w,y,x+w,y+h,r); c.arcTo(x+w,y+h,x,y+h,r); c.arcTo(x,y+h,x,y,r); c.arcTo(x,y,x+w,y,r); c.closePath(); }
+function bsArc(rx,ry,col,strength){ const x=sx(rx),y=sy(ry),r=15; dc.strokeStyle=col; dc.lineWidth=2.6;
+  dc.globalAlpha=Math.min(1,0.35+strength*1.3); dc.beginPath(); dc.arc(x,y,r,-2.3,2.0); dc.stroke();
+  const a=2.0; dc.fillStyle=col; dc.beginPath(); dc.moveTo(x+r*Math.cos(a),y+r*Math.sin(a));
+  dc.lineTo(x+r*Math.cos(a)-9*Math.cos(a-1.2),y+r*Math.sin(a)-9*Math.sin(a-1.2));
+  dc.lineTo(x+r*Math.cos(a)-9*Math.cos(a+0.2),y+r*Math.sin(a)-9*Math.sin(a+0.2)); dc.closePath(); dc.fill(); dc.globalAlpha=1; }
+
+function drawDev(){
+  const {N,r,th}=vals(); layout();
+  dc.fillStyle='#0b0d12'; dc.fillRect(0,0,dev.width,dev.height);
+  // mesa (2DES)
+  dc.fillStyle='#1e2a55'; dc.fillRect(sx(RX0),sy(RY0),RW*SC,RH*SC);
+  dc.strokeStyle='#3a4a80'; dc.lineWidth=1; dc.strokeRect(sx(RX0),sy(RY0),RW*SC,RH*SC);
+  // metal gates
+  for(const g of GATES){ fillP(g,'#c9c08a'); strokeP(g,'#8d855a',1); }
+  // chamber area A_I highlight
+  dc.fillStyle='rgba(120,200,255,.09)'; dc.fillRect(sx(CL),sy(CT),(CR-CL)*SC,(CB-CT)*SC);
+  // chiral edge (dim, animated flow)
+  strokeP(EDGE,'rgba(255,90,90,.5)',2.4,[16,11],-flow*1.6);
+  // r2 path: chamber perimeter loop that encircles A_I and acquires theta
+  const lx=sx(CL),rx=sx(CR),ty=sy(CT),by=sy(CB);
+  dc.save(); dc.strokeStyle='#ff9a52'; dc.lineWidth=3; dc.globalAlpha=0.5+0.5*r;
+  dc.setLineDash([14,9]); dc.lineDashOffset=-flow*1.4; roundRectPath(dc,lx,ty,rx-lx,by-ty,16); dc.stroke(); dc.restore();
+  // backscatter arcs at the two QPCs (r1 blue @ QPC1, r2 orange @ QPC2)
+  bsArc(QPC1[0],QPC1[1],'#4ea1ff',1); bsArc(QPC2[0],QPC2[1],'#ff9a52',r);
+  // enclosed quasiparticles
+  const cx=(CL+CR)/2, cy=(CT+CB)/2;
+  for(let k=0;k<N;k++){ const col=k%3,row=Math.floor(k/3); spiral(sx(cx+(col-1)*((CR-CL)*0.20)), sy(cy-8+row*30),8); }
+  // out-of-plane B field dots
+  for(const c of [[1010,1380],[2235,1380],[1010,2120],[2235,2120]]) fieldDot(c[0],c[1],7,0.5);
+  // interference node (recombined amplitude) at top edge between QPCs
+  const amp=Math.hypot(1+r*Math.cos(th), r*Math.sin(th))/(1+r);
+  const nx=sx((QPC1[0]+QPC2[0])/2), ny=sy(1304);
+  dc.fillStyle='rgba(255,255,255,'+(0.15+0.85*amp).toFixed(3)+')'; dc.beginPath(); dc.arc(nx,ny,5+6*amp,0,TAU); dc.fill();
+  // labels
+  dc.fillStyle='#4ea1ff'; dc.font='12px sans-serif'; dc.textAlign='center'; dc.fillText('r₁', sx(QPC1[0]), sy(1660));
+  dc.fillStyle='#ff9a52'; dc.fillText('r₂', sx(QPC2[0]), sy(1660));
+  dc.fillStyle='#9aa3af'; dc.font='10px sans-serif';
+  dc.fillText('QPC1', sx(QPC1[0]), sy(1860)); dc.fillText('QPC2', sx(QPC2[0]), sy(1860));
+  dc.fillText('A_I (enclosed area) + N q.p. → θ', (lx+rx)/2, by+15);
+  dc.fillStyle='#cbd3df'; dc.fillText('|r₁+r₂e^{iθ}|', nx, ny-11);
+  dc.textAlign='left'; dc.fillText('I_source', 6, sy(1305)-6);
+  // field key
+  const bX=dev.width-150; dc.save(); dc.strokeStyle='#7fd1ff'; dc.fillStyle='#7fd1ff'; dc.lineWidth=1.5;
+  dc.beginPath(); dc.arc(bX,20,7,0,TAU); dc.stroke(); dc.beginPath(); dc.arc(bX,20,1.6,0,TAU); dc.fill(); dc.restore();
+  dc.fillStyle='#9aa3af'; dc.font='10px sans-serif'; dc.textAlign='left'; dc.fillText('B ⊥ 2DES (out of page)', bX+12,24);
+}
+
+function drawTrace(){
+  const {B,N,r}=vals(); const amp=2*1*r;
+  tc.fillStyle='#0c0e12'; tc.fillRect(0,0,tr.width,tr.height);
+  const g={x:46,y:14,w:tr.width-66,h:tr.height-44};
+  const Bmin=8.60,Bmax=8.75;
+  const X=b=>g.x+(b-Bmin)/(Bmax-Bmin)*g.w, Y=v=>g.y+(amp-v)/(2*amp+1e-9)*g.h;
+  tc.strokeStyle='#333'; tc.beginPath(); tc.moveTo(g.x,Y(0)); tc.lineTo(g.x+g.w,Y(0)); tc.stroke();
+  // paper convention dG = dG0 cos(theta); overall sign absorbed into dG0
+  function plot(Nn,col,wd,dash){ tc.strokeStyle=col; tc.lineWidth=wd; tc.setLineDash(dash||[]); tc.beginPath();
+    for(let i=0;i<=400;i++){ const b=Bmin+(Bmax-Bmin)*i/400; const dG=amp*Math.cos(thAB(b)+Nn*thAnyon());
+      const x=X(b),y=Y(dG); i?tc.lineTo(x,y):tc.moveTo(x,y);} tc.stroke(); tc.setLineDash([]); }
+  plot(N+1,'#5a6472',1.2,[4,3]); plot(N,'#7fe0ff',2,null);
+  const dGc=amp*Math.cos(thAB(B)+N*thAnyon());
+  tc.fillStyle='#fff'; tc.beginPath(); tc.arc(X(B),Y(dGc),4,0,TAU); tc.fill();
+  tc.strokeStyle='#fff'; tc.setLineDash([4,3]); tc.beginPath(); tc.moveTo(X(B),g.y); tc.lineTo(X(B),g.y+g.h); tc.stroke(); tc.setLineDash([]);
+  tc.strokeStyle='#888'; tc.lineWidth=1; tc.strokeRect(g.x,g.y,g.w,g.h);
+  tc.fillStyle='#cbd3df'; tc.font='11px sans-serif'; tc.textAlign='center'; tc.textBaseline='top';
+  for(let b=8.60;b<=8.75001;b+=0.05){ const x=X(b); tc.beginPath(); tc.moveTo(x,g.y+g.h); tc.lineTo(x,g.y+g.h+4); tc.stroke(); tc.fillText(b.toFixed(2),x,g.y+g.h+6); }
+  tc.textAlign='center'; tc.textBaseline='bottom'; tc.fillText('B (T)',g.x+g.w/2,g.y+g.h+26);
+  tc.save(); tc.translate(g.x-32,g.y+g.h/2); tc.rotate(-Math.PI/2); tc.textAlign='center'; tc.fillText('δG',0,0); tc.restore();
+  tc.fillStyle='#5a6472'; tc.font='10px sans-serif'; tc.textAlign='left'; tc.fillText('dashed = N_qp+1', g.x+6, g.y+12);
+}
+function update(){
+  const {B,N,r,ab,an,th}=vals();
+  el('v_B').textContent=B.toFixed(3); el('v_N').textContent=N; el('v_r').textContent=r.toFixed(2);
+  el('o_ab').textContent=(((ab%TAU)+TAU)%TAU/Math.PI).toFixed(2)+'π';
+  el('o_an').textContent=(an/Math.PI).toFixed(2)+'π';
+  el('o_tot').textContent=(((th%TAU)+TAU)%TAU/Math.PI).toFixed(2)+'π';
+  const R=1+r*r+2*r*Math.cos(th); el('o_R').textContent=R.toFixed(3);
+  const Gn=Math.max(0,Math.min(1,1-(R-(1-r)*(1-r))/((1+r)*(1+r)-(1-r)*(1-r))));
+  el('bar').style.width=(100*Gn).toFixed(0)+'%';
+  drawDev(); drawTrace();
+}
+function loop(ts){ if(last===null)last=ts; const dt=Math.min(0.05,(ts-last)/1000); last=ts;
+  if(playing){ flow+=dt*60; update(); } requestAnimationFrame(loop); }
+el('play').addEventListener('click',()=>{ playing=!playing; el('play').textContent=playing?'⏸ 흐름 정지':'▶ 흐름 재생'; });
+document.querySelectorAll('button[data-nu]').forEach(b=>b.addEventListener('click',()=>{
+  document.querySelectorAll('button[data-nu]').forEach(x=>x.classList.remove('active')); b.classList.add('active'); nu=b.dataset.nu; update(); }));
+for(const id of ['s_B','s_N','s_r']) el(id).addEventListener('input',update);
+update(); requestAnimationFrame(loop);
+</script>
+</body>
+</html>

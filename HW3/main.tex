@@ -1,0 +1,158 @@
+\documentclass[a4paper,11pt]{article}
+\usepackage{amsmath,amssymb,amsthm, tikz,titlesec,hyperref,esint,braket, graphicx, mathrsfs, enumitem}
+\usepackage[a4paper,margin=2cm]{geometry}
+\linespread{1.3}
+\newtheorem{claim}{Claim}[section]
+
+\newcommand\name{Park Chanwoo}   % Name of the student
+\newcommand\university{KAIST} % Name of the university
+\newcommand\department{Physics} % Name of the department
+\newcommand\studentid{20230297} % Student ID
+\newcommand\s{\,\;}
+
+
+\newenvironment{solution}[1]
+  {\renewcommand\qedsymbol{$\square$}\begin{proof}[\textbf{Solution#1}]}
+  {\end{proof}}
+\newenvironment{note}
+  {\renewcommand\qedsymbol{$\blacksquare$}\begin{proof}[\textnormal{\textbf{note}}]}
+  {\end{proof}}
+
+\title{KAIST\\2026 Special Topics in Physics Quantum Electronic Devices I: Interferometers and Fractional Particles\\
+Homework 3\bigskip}
+\author{\textbf{\Large \name} \\
+% University: \university\\
+Department: \department\\
+Student ID: \studentid}
+\date{\today}
+
+\begin{document}
+\thispagestyle{empty}
+\maketitle
+\tableofcontents
+\titleformat{\section}[frame]{\pagebreak}{\filright
+\footnotesize  \enspace \textsf{KAIST --- Interferometers and Fractional Particles 2026 Spring}\enspace}{6pt}{\Large\bfseries\filcenter}
+\setcounter{secnumdepth}{1}
+\setcounter{tocdepth}{2}
+
+\newcommand{\tr}{\operatorname{tr}}
+\newcommand{\sgn}{\operatorname{sgn}}
+\newcommand{\supp}{\operatorname{supp}}
+\renewcommand{\Re}{\operatorname{Re}}
+\renewcommand{\Im}{\operatorname{Im}}
+\newcommand{\boltz}{k_{\mathrm{B}}}
+
+\section{\#1}
+\subsection{(1a)}
+
+The boundary conditions for $V_1(x) = \alpha\delta(x)$ are
+\begin{equation}
+    \psi(0^+) = \psi(0^-), \qquad \psi'(0^+) - \psi'(0^-) = \frac{2m\alpha}{\hbar^2}\psi(0).
+\end{equation}
+With $\psi = e^{ikx} + re^{-ikx}$ for $x < 0$ and $\psi = te^{ikx}$ for $x > 0$, these become
+\begin{equation}
+    1 + r = t, \qquad ik(t - 1 + r) = \frac{2m\alpha}{\hbar^2}\,t.
+\end{equation}
+Defining $\gamma \equiv m\alpha/(\hbar^2 k)$ and substituting $r = t - 1$:
+\begin{equation}
+    i(2t - 2) = 2\gamma\, t \implies t(i - \gamma) = i \implies t = \frac{1}{1 + i\gamma}, \quad r = \frac{-i\gamma}{1 + i\gamma}.
+\end{equation}
+Therefore,
+\begin{equation}
+    T_1 = \frac{1}{1 + \gamma^2}, \qquad R_1 = \frac{\gamma^2}{1 + \gamma^2}.
+\end{equation}
+
+
+\subsection{(1b)}
+
+For $V_2(x) = \alpha[\delta(x) + \delta(x-d)]$, write
+\begin{equation}
+    \psi = \begin{cases}
+        e^{ikx} + re^{-ikx}, & x < 0, \\
+        Ae^{ikx} + Be^{-ikx}, & 0 < x < d, \\
+        te^{ikx}, & x > d.
+    \end{cases}
+\end{equation}
+
+\noindent\textbf{Boundary conditions at $x = 0$:}
+\begin{align}
+    1 + r &= A + B, \label{eq:c1}\\
+    i(A - B - 1 + r) &= 2\gamma(A + B). \label{eq:d1}
+\end{align}
+Substituting $r = A + B - 1$ from \eqref{eq:c1} into \eqref{eq:d1}:
+\begin{equation}
+    i(A - 1) = \gamma(A + B). \label{eq:AB1}
+\end{equation}
+
+\noindent\textbf{Boundary conditions at $x = d$:}
+\begin{align}
+    Ae^{ikd} + Be^{-ikd} &= te^{ikd}, \\
+    ik(te^{ikd} - Ae^{ikd} + Be^{-ikd}) &= 2k\gamma\, te^{ikd}.
+\end{align}
+Using the continuity condition, the derivative condition simplifies to $iBe^{-ikd} = \gamma(Ae^{ikd} + Be^{-ikd})$, giving
+\begin{equation}
+    B = \frac{\gamma A\, e^{2ikd}}{i - \gamma}. \label{eq:AB2}
+\end{equation}
+
+Substituting \eqref{eq:AB2} into \eqref{eq:AB1} and rearranging:
+\begin{equation}
+    (1+i\gamma)(1 - A) = \gamma A \frac{i - \gamma + \gamma e^{2ikd}}{i - \gamma} \implies A = \frac{1 + i\gamma}{(1+i\gamma)^2 + \gamma^2 e^{2ikd}},
+\end{equation}
+where we used $(1+i\gamma)^2 = 1 + 2i\gamma - \gamma^2$. The transmission amplitude is $t = A + Be^{-2ikd} = Ai/(i-\gamma) = A/(1+i\gamma)$:
+\begin{equation}
+    t = \frac{1}{(1 + i\gamma)^2 + \gamma^2 e^{2ikd}}.
+\end{equation}
+
+Expanding $(1+i\gamma)^2 = (1-\gamma^2) + 2i\gamma$:
+\begin{align}
+    \left|(1 + i\gamma)^2 + \gamma^2 e^{2ikd}\right|^2
+    &= \big[(1 - \gamma^2) + \gamma^2\cos 2kd\big]^2 + \big[2\gamma + \gamma^2\sin 2kd\big]^2 \nonumber\\
+    &= (1 + \gamma^2)^2 + \gamma^4 + 2\gamma^2\big[(1 - \gamma^2)\cos 2kd + 2\gamma\sin 2kd\big].
+\end{align}
+Define $\theta$ by $\cos 2\theta = -\frac{1-\gamma^2}{1+\gamma^2}$ and $\sin 2\theta = \frac{2\gamma}{1+\gamma^2}$. Then
+\begin{equation}
+    (1-\gamma^2)\cos 2kd + 2\gamma\sin 2kd = -(1+\gamma^2)\cos 2(kd+\theta),
+\end{equation}
+and therefore
+\begin{equation}
+    T_2 = \frac{1}{(1+\gamma^2)^2 + \gamma^4 - 2\gamma^2(1+\gamma^2)\cos 2(kd+\theta)}. \label{eqn:T2-formula}
+\end{equation}
+
+
+\subsection{(1c)}
+
+Define the transfer matrix $M$ by $\binom{A_L}{B_L} = M\binom{A_R}{B_R}$, where the wave on each side is $Ae^{iky} + Be^{-iky}$ with $y$ measured from the scatterer. From (1a), $1 = (1+i\gamma)\,t$ and $r = -i\gamma\, t$, so the transfer matrix for a single delta barrier is
+\begin{equation}
+    M = \begin{pmatrix} 1+i\gamma & i\gamma \\ -i\gamma & 1-i\gamma \end{pmatrix}.
+\end{equation}
+The dynamical phase over distance $d$ is encoded in the propagation matrix
+\begin{equation}
+    U = \begin{pmatrix} e^{-ikd} & 0 \\ 0 & e^{ikd} \end{pmatrix}.
+\end{equation}
+The total transfer matrix is $M_\mathrm{tot} = M U M$. Computing the $(1,1)$ entry:
+\begin{equation}
+    [M_\mathrm{tot}]_{11} = (1+i\gamma)^2 e^{-ikd} + \gamma^2 e^{ikd} = e^{-ikd}\big[(1+i\gamma)^2 + \gamma^2 e^{2ikd}\big].
+\end{equation}
+Since $T_2 = 1/|[M_\mathrm{tot}]_{11}|^2$ and $|e^{-ikd}| = 1$:
+\begin{equation}
+    T_2 = \frac{1}{\left|(1+i\gamma)^2 + \gamma^2 e^{2ikd}\right|^2},
+\end{equation}
+which is identical to the result in (1b) before expanding absolute square.
+
+
+\subsection{(1d)}
+
+Refer to the Equation.~\ref{eqn:T2-formula}, $T_2$ is maximized when $\cos 2(kd + \theta) = 1$, i.e.,
+\begin{equation}
+    kd + \theta = n\pi, \quad n \in \mathbb{Z}.
+\end{equation}
+At this maximum:
+\begin{equation}
+    T_2^{\max} = \frac{1}{(1+\gamma^2)^2 + \gamma^4 - 2\gamma^2(1+\gamma^2)} = \frac{1}{\left[(1+\gamma^2) - \gamma^2\right]^2} = 1.
+\end{equation}
+Since $T_1 = 1/(1+\gamma^2) < 1$ for any $\gamma \neq 0$, we have $T_2^{\max} > T_1$.
+
+At the resonance condition, the two delta barriers form a cavity, and the particle undergoes multiple reflections between them. When the round-trip phase $2kd + 2\theta$ (dynamical phase $2kd$ and reflection phases $2\theta$) equals a multiple of $2\pi$, the multiply-reflected waves interfere constructively in the forward direction and destructively in the backward direction, yielding perfect transmission---analogous to a Fabry--P\'{e}rot interferometer.
+
+
+\end{document}

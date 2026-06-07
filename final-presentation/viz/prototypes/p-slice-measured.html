@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>P · 측정 데이터 십자선 슬라이스</title>
+<link rel="stylesheet" href="../shared/style.css">
+<script src="../shared/embed.js"></script>
+<style>canvas{cursor:crosshair}</style>
+</head>
+<body>
+<header>
+  <h1>P · 측정 데이터 십자선 슬라이스 — δG(B, δV_g)</h1>
+  <p>[프로토타입] 논문 측정 heatmap(jet 역변환 추출)에서 직접 가로컷·세로컷을 읽는다. 십자선을 끌면(또는 슬라이더로) 두 컷이 갱신. 실데이터라 모델 대신 <b style="color:#7fe0ff">음(AB)</b>·<b style="color:#ff9a52">양(jump)</b> 기울기 가이드선을 손으로 맞춰 본다. · <a href="../index.html">← 통합 갤러리</a></p>
+</header>
+
+<div class="wrap">
+  <div class="plots">
+    <div class="card">
+      <div class="row" style="justify-content:space-between">
+        <h2 style="margin:0">측정 δG 맵 — 클릭/드래그로 십자선</h2>
+        <div class="toggle"><button data-src="fig2" class="active">Fig 2</button><button data-src="fig3b">Fig 3b</button></div>
+      </div>
+      <canvas id="map" width="820" height="340"></canvas>
+    </div>
+    <div class="card">
+      <h2>가로컷  δG vs B   @ δV_g = <b id="lab_v">–</b> mV</h2>
+      <canvas id="cutH" width="820" height="150"></canvas>
+    </div>
+    <div class="card">
+      <h2>세로컷  δG vs δV_g   @ B = <b id="lab_b">–</b> T</h2>
+      <canvas id="cutV" width="820" height="150"></canvas>
+    </div>
+  </div>
+  <div class="controls">
+    <div class="card">
+      <h2>십자선 위치</h2>
+      <div class="slider"><label>B <b id="v_B">–</b> T</label>
+        <input id="s_B" type="range" min="8.7" max="9.0" step="0.001" value="8.85"></div>
+      <div class="slider"><label>δV_g <b id="v_V">–</b> mV</label>
+        <input id="s_V" type="range" min="-32" max="-3" step="0.1" value="-17"></div>
+      <p class="sub">맵을 클릭/드래그해도 움직입니다.</p>
+    </div>
+    <div class="card">
+      <h2>논문 주석 오버레이</h2>
+      <label style="display:block"><input id="c_ov" type="checkbox" checked> 오버레이 표시 (fig2_overlay.svg)</label>
+      <div class="sub">실선=AB fringe(음 기울기), 점선=phase-slip 경계(양 기울기). 컷에는 slip 위치를 ▮로 표기. fig2만 제공.</div>
+    </div>
+    <div class="card">
+      <h2>기울기 가이드</h2>
+      <label style="display:block"><input id="c_slope" type="checkbox" checked> 가이드선 표시</label>
+      <div class="sub">기본값은 fig2 오버레이 실선/점선 기울기에서 추정(AB −239, jump +512 mV/T).</div>
+      <div class="slider"><label>음의 기울기 (AB) <b id="v_sa">-239</b> mV/T</label>
+        <input id="s_sa" type="range" min="-400" max="-20" step="2" value="-239"></div>
+      <div class="slider"><label>양의 기울기 (jump) <b id="v_sb">512</b> mV/T</label>
+        <input id="s_sb" type="range" min="50" max="1200" step="5" value="512"></div>
+    </div>
+    <div class="card">
+      <h2>측정 컷 주기</h2>
+      <div class="readout">
+        <div><span>가로컷 B-주기</span><b id="o_bp">–</b></div>
+        <div><span>세로컷 V_g-주기</span><b id="o_vp">–</b></div>
+        <div><span>창 (B)</span><b id="o_ext">–</b></div>
+        <div><span>colormap</span><b id="o_cm">–</b></div>
+      </div>
+      <div class="sub" style="margin-top:8px">주기는 컷의 peak 간격 평균(노이즈로 근사값). δG는 colormap으로 환산한 절대값(×10⁻² e²/h). 추출 특성상 논문 주석선(점선/실선) 흔적이 일부 남아 있을 수 있음.</div>
+    </div>
+  </div>
+</div>
+
+<script src="data/measured.js"></script>
+<script src="data/fig2_overlay.js"></script>
+<script src="../shared/render.js"></script>
+<script>
+"use strict";
+const el=id=>document.getElementById(id);
+const map=el('map'), mc=map.getContext('2d');
+const cutH=el('cutH'), hc=cutH.getContext('2d');
+const cutV=el('cutV'), vc=cutV.getContext('2d');
+const BOX={x:54,y:14,w:670,h:296};
+const BH={x:54,y:14,w:670,h:106};
+const BV={x:54,y:14,w:670,h:106};
+let SRC='fig2', Bsel=8.85, Vsel=-17, hmCache={};
+function M(){ return window.MEASURED[SRC]; }
+function fmtUnit(u){ return (u||'').replace('x1e-2 e2/h','×10⁻² e²/h'); }   // pretty colorbar/axis unit
+function buf(){ if(hmCache[SRC]) return hmCache[SRC]; const m=M(); const h=VZ.makeHeatmap(m.nx,m.ny);
+  VZ.paintHeatmap(h,new Float32Array(m.dG),1,'div'); hmCache[SRC]=h; return h; }
+
+function axes(c,box,ext,xstep,ystep,xlabel,ylabel,yfmt){
+  const x0=ext[0],x1=ext[1],y0=ext[2],y1=ext[3];
+  const X=v=>box.x+(v-x0)/(x1-x0)*box.w, Y=v=>box.y+(y1-v)/(y1-y0)*box.h;
+  c.strokeStyle='#888'; c.lineWidth=1; c.strokeRect(box.x,box.y,box.w,box.h);
+  c.fillStyle='#cbd3df'; c.font='11px sans-serif';
+  c.textAlign='center'; c.textBaseline='top';
+  for(let v=Math.ceil(x0/xstep)*xstep; v<=x1+1e-9; v+=xstep){ const x=X(v);
+    c.beginPath(); c.moveTo(x,box.y+box.h); c.lineTo(x,box.y+box.h+4); c.stroke(); c.fillText((xstep<1?v.toFixed(2):v.toFixed(0)),x,box.y+box.h+6); }
+  c.textAlign='right'; c.textBaseline='middle';
+  for(let v=Math.ceil(y0/ystep)*ystep; v<=y1+1e-9; v+=ystep){ const y=Y(v);
+    c.beginPath(); c.moveTo(box.x-4,y); c.lineTo(box.x,y); c.stroke(); c.fillText((yfmt?yfmt(v):v.toFixed(0)),box.x-6,y); }
+  c.textAlign='center'; c.textBaseline='bottom'; c.fillText(xlabel,box.x+box.w/2,box.y+box.h+26);
+  c.save(); c.translate(box.x-36,box.y+box.h/2); c.rotate(-Math.PI/2); c.textAlign='center'; c.fillText(ylabel,0,0); c.restore();
+  return {X,Y};
+}
+function rowAt(Vg){ const m=M(),e=m.extent; let iy=Math.round((e[3]-Vg)/(e[3]-e[2])*(m.ny-1)); return Math.max(0,Math.min(m.ny-1,iy)); }
+function colAt(B){ const m=M(),e=m.extent; let ix=Math.round((B-e[0])/(e[1]-e[0])*(m.nx-1)); return Math.max(0,Math.min(m.nx-1,ix)); }
+function hcut(){ const m=M(),e=m.extent,iy=rowAt(Vsel),B=new Float64Array(m.nx),g=new Float64Array(m.nx);
+  for(let ix=0;ix<m.nx;ix++){ B[ix]=e[0]+(e[1]-e[0])*ix/(m.nx-1); g[ix]=m.dG[iy*m.nx+ix]; } return {x:B,y:g}; }
+function vcut(){ const m=M(),e=m.extent,ix=colAt(Bsel),V=new Float64Array(m.ny),g=new Float64Array(m.ny);
+  for(let iy=0;iy<m.ny;iy++){ V[iy]=e[3]-(e[3]-e[2])*iy/(m.ny-1); g[iy]=m.dG[iy*m.nx+ix]; } return {x:V,y:g}; }
+function smooth(a){ const o=new Float64Array(a.length); for(let i=0;i<a.length;i++){ let s=0,n=0; for(let k=-1;k<=1;k++){const j=i+k; if(j>=0&&j<a.length){s+=a[j];n++;}} o[i]=s/n; } return o; }
+function period(xs,ysRaw){ const ys=smooth(ysRaw); let amax=1e-6; for(const v of ys) amax=Math.max(amax,Math.abs(v));
+  const pk=[]; for(let i=1;i<ys.length-1;i++) if(ys[i]>ys[i-1]&&ys[i]>=ys[i+1]&&ys[i]>0.18*amax) pk.push(xs[i]);
+  if(pk.length<2) return null; let s=0; for(let i=1;i<pk.length;i++) s+=Math.abs(pk[i]-pk[i-1]); return s/(pk.length-1); }
+
+function drawMap(){
+  const m=M(),e=m.extent; mc.fillStyle='#0c0e12'; mc.fillRect(0,0,map.width,map.height);
+  mc.imageSmoothingEnabled=true; mc.drawImage(buf().buf,BOX.x,BOX.y,BOX.w,BOX.h);
+  const span=e[1]-e[0], xstep=span>0.5?0.2:0.1;
+  const t=axes(mc,BOX,e,xstep,5,'B (T)','δV_g (mV)');
+  const sc=m.scale;
+  if(sc){ VZ.colorbar(mc,BOX.x+BOX.w+18,BOX.y,14,BOX.h,(-sc).toFixed(0),'+'+sc.toFixed(0),'δG ('+fmtUnit(m.unit)+')'); }
+  else { VZ.colorbar(mc,BOX.x+BOX.w+18,BOX.y,14,BOX.h,'-1','+1','δG (정규화)'); }
+  if(ovOn()) drawOverlay(t);
+  if(el('c_slope').checked){ slope(t,parseFloat(el('s_sa').value),'#7fe0ff'); slope(t,parseFloat(el('s_sb').value),'#ff9a52'); }
+  mc.save(); mc.beginPath(); mc.rect(BOX.x,BOX.y,BOX.w,BOX.h); mc.clip();
+  mc.strokeStyle='#fff'; mc.lineWidth=1.2; mc.setLineDash([4,3]);
+  mc.beginPath(); mc.moveTo(t.X(Bsel),BOX.y); mc.lineTo(t.X(Bsel),BOX.y+BOX.h);
+  mc.moveTo(BOX.x,t.Y(Vsel)); mc.lineTo(BOX.x+BOX.w,t.Y(Vsel)); mc.stroke(); mc.setLineDash([]);
+  mc.fillStyle='#fff'; mc.beginPath(); mc.arc(t.X(Bsel),t.Y(Vsel),3.5,0,7); mc.fill(); mc.restore();
+}
+function slope(t,sl,col){ const e=M().extent; mc.save(); mc.beginPath(); mc.rect(BOX.x,BOX.y,BOX.w,BOX.h); mc.clip();
+  mc.strokeStyle=col; mc.lineWidth=2; mc.globalAlpha=0.9;
+  const v0=Vsel+sl*(e[0]-Bsel), v1=Vsel+sl*(e[1]-Bsel);
+  mc.beginPath(); mc.moveTo(t.X(e[0]),t.Y(v0)); mc.lineTo(t.X(e[1]),t.Y(v1)); mc.stroke(); mc.restore(); }
+// --- fig2_overlay.svg annotation lines (paper) in (B,dVg) data coords ---
+function OV(){ return window.OVERLAY && window.OVERLAY[SRC]; }
+function ovOn(){ return OV() && el('c_ov').checked; }
+const SLIPCOL='#ff2bd6';                                                 // phase-slip color (heatmap dashed + cut markers)
+function drawOverlay(t){ const ov=OV(); mc.save(); mc.beginPath(); mc.rect(BOX.x,BOX.y,BOX.w,BOX.h); mc.clip();
+  mc.lineCap='round'; mc.strokeStyle='rgba(12,12,4,0.95)'; mc.lineWidth=4;   // AB fringe markers (solid)
+  for(const s of ov.solid){ mc.beginPath(); mc.moveTo(t.X(s[0]),t.Y(s[1])); mc.lineTo(t.X(s[2]),t.Y(s[3])); mc.stroke(); }
+  mc.strokeStyle=SLIPCOL; mc.lineWidth=3.2; mc.setLineDash([7,4]);           // phase-slip boundaries (dashed, magenta)
+  for(const s of ov.dashed){ mc.beginPath(); mc.moveTo(t.X(s[0]),t.Y(s[1])); mc.lineTo(t.X(s[2]),t.Y(s[3])); mc.stroke(); }
+  mc.setLineDash([]); mc.restore(); }
+// where the slip (dashed) lines cross a fixed dVg (-> B list) or fixed B (-> dVg list)
+function slipBatV(Vg,e){ const ov=OV(),o=[]; if(!ov)return o; for(const s of ov.dashed){ if(s[1]===s[3])continue;
+  if((Vg-s[1])*(Vg-s[3])<=0){ const B=s[0]+(Vg-s[1])/(s[3]-s[1])*(s[2]-s[0]); if(B>=e[0]&&B<=e[1])o.push(B);} } return o; }
+function slipVatB(B,e){ const ov=OV(),o=[]; if(!ov)return o; for(const s of ov.dashed){ if(s[0]===s[2])continue;
+  if((B-s[0])*(B-s[2])<=0){ const Vg=s[1]+(B-s[0])/(s[2]-s[0])*(s[3]-s[1]); if(Vg>=e[2]&&Vg<=e[3])o.push(Vg);} } return o; }
+
+function drawCut(ctx,box,cut,ext,xstep,xlabel,col,marker,sc,unit,marks){
+  ctx.fillStyle='#0c0e12'; ctx.fillRect(0,0,ctx.canvas.width,ctx.canvas.height);
+  let amax=0.02; for(const d of cut.y) amax=Math.max(amax,Math.abs(d));
+  const X=v=>box.x+(v-ext[0])/(ext[1]-ext[0])*box.w, Y=d=>box.y+(amax-d)/(2*amax)*box.h;
+  ctx.strokeStyle='#333'; ctx.beginPath(); ctx.moveTo(box.x,Y(0)); ctx.lineTo(box.x+box.w,Y(0)); ctx.stroke();
+  // phase-slip position markers (from fig2_overlay dashed lines)
+  if(marks) for(const mx of marks){ ctx.strokeStyle=SLIPCOL; ctx.lineWidth=2.6; ctx.setLineDash([]);
+    ctx.beginPath(); ctx.moveTo(X(mx),box.y); ctx.lineTo(X(mx),box.y+box.h); ctx.stroke(); }
+  ctx.strokeStyle=col; ctx.lineWidth=1.6; ctx.beginPath();
+  for(let i=0;i<cut.x.length;i++){ const x=X(cut.x[i]),y=Y(cut.y[i]); i?ctx.lineTo(x,y):ctx.moveTo(x,y);} ctx.stroke();
+  ctx.strokeStyle='#fff'; ctx.setLineDash([4,3]); ctx.beginPath(); ctx.moveTo(X(marker),box.y); ctx.lineTo(X(marker),box.y+box.h); ctx.stroke(); ctx.setLineDash([]);
+  // y-axis in absolute units when a colormap scale is known (physical dG = norm * sc)
+  const ylab = sc? 'δG ('+fmtUnit(unit)+')' : 'δG';
+  axes(ctx,box,[ext[0],ext[1],-amax,amax],xstep,amax,xlabel,ylab, v=> sc? (v*sc).toFixed(1) : v.toFixed(2));
+}
+function render(){
+  Bsel=parseFloat(el('s_B').value); Vsel=parseFloat(el('s_V').value);
+  const m=M(), e=m.extent;
+  el('v_B').textContent=Bsel.toFixed(3); el('v_V').textContent=Vsel.toFixed(1);
+  el('lab_v').textContent=Vsel.toFixed(1); el('lab_b').textContent=Bsel.toFixed(3);
+  el('v_sa').textContent=el('s_sa').value; el('v_sb').textContent='+'+el('s_sb').value;
+  el('o_ext').textContent=e[0].toFixed(2)+'–'+e[1].toFixed(2)+' T'+(m.extent_note?' · '+m.extent_note:'');
+  el('o_cm').textContent=m.scale?('±'+m.scale+' '+fmtUnit(m.unit)+(m.scale_note?' (가정)':'')):'정규화';
+  drawMap();
+  const H=hcut(), V=vcut(), span=e[1]-e[0], sc=M().scale, unit=M().unit;
+  const hMarks=ovOn()?slipBatV(Vsel,e):null, vMarks=ovOn()?slipVatB(Bsel,e):null;
+  drawCut(hc,BH,H,[e[0],e[1]],span>0.5?0.2:0.1,'B (T)','#7fe0ff',Bsel,sc,unit,hMarks);
+  drawCut(vc,BV,V,[e[2],e[3]],5,'δV_g (mV)','#ff9a52',Vsel,sc,unit,vMarks);
+  const bp=period(H.x,H.y), vp=period(V.x,V.y);
+  el('o_bp').textContent=bp?(bp*1e3).toFixed(0)+' mT':'—';
+  el('o_vp').textContent=vp?vp.toFixed(1)+' mV':'—';
+}
+let pending=false; function schedule(){ if(pending)return; pending=true; requestAnimationFrame(()=>{pending=false;render();}); }
+function setSource(s){ SRC=s; const e=M().extent;
+  el('s_B').min=e[0]; el('s_B').max=e[1]; el('s_B').step=((e[1]-e[0])/400).toFixed(5);
+  el('s_V').min=e[2]; el('s_V').max=e[3]; el('s_V').step=0.1;
+  Bsel=Math.min(Math.max(Bsel,e[0]),e[1]); Vsel=Math.min(Math.max(Vsel,e[2]),e[3]);  // preserve position across toggles, clamped to new extent
+  el('s_B').value=Bsel; el('s_V').value=Vsel;
+  const ov=OV();                               // default slope guides from overlay slopes when available
+  el('s_sa').value = ov? ov.slopeAB : -150;
+  el('s_sb').value = ov? ov.slopeJump : 450;
+  render(); }
+function pick(ev){ const r=map.getBoundingClientRect(), e=M().extent;
+  const px=(ev.clientX-r.left)*map.width/r.width, py=(ev.clientY-r.top)*map.height/r.height;
+  let b=e[0]+(px-BOX.x)/BOX.w*(e[1]-e[0]); let v=e[3]-(py-BOX.y)/BOX.h*(e[3]-e[2]);
+  b=Math.max(e[0],Math.min(e[1],b)); v=Math.max(e[2],Math.min(e[3],v));
+  el('s_B').value=b; el('s_V').value=v; schedule(); }
+let dragging=false;
+map.addEventListener('mousedown',e=>{dragging=true;pick(e);});
+window.addEventListener('mousemove',e=>{if(dragging)pick(e);});
+window.addEventListener('mouseup',()=>{dragging=false;});
+document.querySelectorAll('button[data-src]').forEach(b=>b.addEventListener('click',()=>{
+  document.querySelectorAll('button[data-src]').forEach(x=>x.classList.remove('active')); b.classList.add('active'); setSource(b.dataset.src); }));
+for(const id of ['s_B','s_V','s_sa','s_sb']) el(id).addEventListener('input',schedule);
+el('c_slope').addEventListener('change',render);
+el('c_ov').addEventListener('change',render);
+setSource('fig2');
+</script>
+</body>
+</html>

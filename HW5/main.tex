@@ -1,0 +1,160 @@
+\documentclass[a4paper,11pt]{article}
+\usepackage{amsmath,amssymb,amsthm, tikz,titlesec,hyperref,esint,braket, graphicx, mathrsfs, enumitem}
+\usepackage[a4paper,margin=2cm]{geometry}
+\linespread{1.3}
+\newtheorem{claim}{Claim}[section]
+
+\newcommand\name{Park Chanwoo}   % Name of the student
+\newcommand\university{KAIST} % Name of the university
+\newcommand\department{Physics} % Name of the department
+\newcommand\studentid{20230297} % Student ID
+\newcommand\s{\,\;}
+
+
+\newenvironment{solution}[1]
+  {\renewcommand\qedsymbol{$\square$}\begin{proof}[\textbf{Solution#1}]}
+  {\end{proof}}
+\newenvironment{note}
+  {\renewcommand\qedsymbol{$\blacksquare$}\begin{proof}[\textnormal{\textbf{note}}]}
+  {\end{proof}}
+
+\title{KAIST\\2026 Special Topics in Physics quantum Electronic Devices I: Interferometers and Fractional Particles\\
+Homework 5\bigskip}
+\author{\textbf{\Large \name} \\
+% University: \university\\
+Department: \department\\
+Student ID: \studentid}
+\date{\today}
+
+\begin{document}
+\thispagestyle{empty}
+\maketitle
+\tableofcontents
+\titleformat{\section}[frame]{\pagebreak}{\filright
+\footnotesize  \enspace \textsf{KAIST --- Interferometers and Fractional Particles 2026 Spring}\enspace}{6pt}{\Large\bfseries\filcenter}
+\setcounter{secnumdepth}{1}
+\setcounter{tocdepth}{2}
+
+\newcommand{\tr}{\operatorname{tr}}
+\newcommand{\sgn}{\operatorname{sgn}}
+\newcommand{\supp}{\operatorname{supp}}
+\renewcommand{\Re}{\operatorname{Re}}
+\renewcommand{\Im}{\operatorname{Im}}
+\newcommand{\boltz}{k_{\mathrm{B}}}
+
+\section{\#1}
+
+Start from the following expression:
+\begin{equation}
+  \frac{E^{(1)}}{N} = \frac{1}{2NV}\sum_{\mathbf{q}\ne 0}\sum_{\mathbf{k}_1, \mathbf{k}_2}\sum_{\sigma_1, \sigma_2} V(\mathbf{q}) \langle \text{FS} | c_{\mathbf{k}_1+\mathbf{q}, \sigma_1}^\dagger c_{\mathbf{k}_2 - \mathbf{q}, \sigma_2}^\dagger c_{\mathbf{k}_2 \sigma_2} c_{\mathbf{k}_1 \sigma_1} | \text{FS} \rangle.
+\end{equation}
+
+For the expectation value to be non-zero, the creation and annihilation operators must pair up to destroy and create electrons in the orbit $(\mathbf{k}, \sigma)$. Hence, there are only two possible pairings, direct and exchange. This can also be thought of as a result of Wick's theorem:
+\begin{align}
+  \langle c_{\mathbf{k}_1+\mathbf{q}, \sigma_1}^\dagger c_{\mathbf{k}_2 - \mathbf{q}, \sigma_2}^\dagger c_{\mathbf{k}_2 \sigma_2} c_{\mathbf{k}_1 \sigma_1} \rangle_{\text{FS}} 
+  &= \langle c_{\mathbf{k}_1+\mathbf{q}, \sigma_1}^\dagger c_{\mathbf{k}_1 \sigma_1} \rangle_{\text{FS}} \langle c_{\mathbf{k}_2 - \mathbf{q}, \sigma_2}^\dagger c_{\mathbf{k}_2 \sigma_2} \rangle_{\text{FS}} \nonumber\\
+  &\quad - \langle c_{\mathbf{k}_1+\mathbf{q}, \sigma_1}^\dagger c_{\mathbf{k}_2 \sigma_2} \rangle_{\text{FS}} \langle c_{\mathbf{k}_2 - \mathbf{q}, \sigma_2}^\dagger c_{\mathbf{k}_1 \sigma_1} \rangle_{\text{FS}}\\
+  &= \delta_{\mathbf{q}, 0} \delta_{\mathbf{q}, 0} \Theta(k_F - \|\mathbf{k}_1\|) \Theta(k_F - \|\mathbf{k}_2\|) \nonumber\\
+  &\quad - \delta_{\mathbf{k}_1 + \mathbf{q}, \mathbf{k}_2}\delta_{\sigma_1, \sigma_2} \delta_{\mathbf{k}_2-\mathbf{q}, \mathbf{k}_1}\delta_{\sigma_2, \sigma_1} \Theta(k_F - \|\mathbf{k}_2\|) \Theta(k_F - \|\mathbf{k}_1\|).
+\end{align}
+
+Since $\mathbf{q} \ne 0$ is excluded in the summation, the first term does not contribute to the energy correction. Also, the Kronecker deltas of the second term are redundant, so we can write the energy correction as
+\begin{align}
+  \frac{E^{(1)}}{N} 
+  &= -\frac{1}{2NV}\sum_{\mathbf{q}\ne 0}\sum_{\mathbf{k}_1, \mathbf{k}_2}\sum_{\sigma_1, \sigma_2} V(\mathbf{q}) \delta_{\mathbf{k}_1 + \mathbf{q}, \mathbf{k}_2} \delta_{\sigma_1, \sigma_2} \Theta(k_F - \|\mathbf{k}_2\|) \Theta(k_F - \|\mathbf{k}_1\|)\\
+  &= -\frac{1}{2NV}\sum_{\mathbf{q}\ne 0}\sum_{\mathbf{k}_1, \sigma_1} V(\mathbf{q}) \Theta(k_F - \|\mathbf{k}_1+\mathbf{q}\|) \Theta(k_F - \|\mathbf{k}_1\|)
+\end{align}
+
+Substituting $V(\mathbf{q}) = \frac{e^2}{\varepsilon_0(\|\mathbf{q}\|^2 + \mu^2)}$, and replacing the summation with integration ($\sum_{\mathbf{k}} \to \frac{V}{(2\pi)^3}\int d^3\mathbf{k}$), we get
+\begin{align}
+  \frac{E^{(1)}}{N} 
+  &= -\frac{1}{2NV}\frac{e^2V^2}{\varepsilon_0(2\pi)^6}\sum_{\sigma_1} \int d^3\mathbf{q} \int d^3\mathbf{k}_1 \frac{1}{\|\mathbf{q}\|^2 + \mu^2} \Theta(k_F - \|\mathbf{k}_1+\mathbf{q}\|) \Theta(k_F - \|\mathbf{k}_1\|)\\
+  &= -\frac{e^2}{64\pi^6\varepsilon_0}\frac{V}{N}\int_{\|\mathbf{k}_1\|<k_F} d^3\mathbf{k}_1 \int_{\|\mathbf{k}_1 + \mathbf{q}\|<k_F} d^3\mathbf{q} \frac{1}{\|\mathbf{q}\|^2 + \mu^2} \\
+  &= -\frac{e^2}{64\pi^6\varepsilon_0}\frac{V}{N}\int_{\|\mathbf{k}_1\|<k_F} d^3\mathbf{k}_1 \int_{\|\mathbf{k}_2\|<k_F} d^3\mathbf{q} \frac{1}{\|\mathbf{k}_2-\mathbf{k}_1\|^2 + \mu^2} 
+\end{align}
+
+By monotone convergence theorem, we can take the limit $\mu \to 0$ inside the integral, and we get
+\begin{equation}
+  \frac{E^{(1)}}{N} = -\frac{e^2}{64\pi^6\varepsilon_0}\frac{V}{N}\int_{\|\mathbf{k}_1\|<k_F} d^3\mathbf{k}_1 \int_{\|\mathbf{k}_2\|<k_F} d^3\mathbf{q} \frac{1}{\|\mathbf{k}_2-\mathbf{k}_1\|^2}.
+\end{equation}
+
+
+Fix $\mathbf{k}_1$ and integrate over $\mathbf{k}_2$ in spherical coordinates with the polar axis along $\mathbf{k}_1$.  Letting $k_1 = \|\mathbf{k}_1\|$, $k_2 = \|\mathbf{k}_2\|$, and $u = \cos\theta$,
+\begin{align}
+  J(k_1) \equiv \int_{\|\mathbf{k}_2\|<k_F}\!\!\frac{d^3\mathbf{k}_2}{\|\mathbf{k}_2-\mathbf{k}_1\|^2}
+  &= 2\pi\!\int_0^{k_F}\!\! k_2^2\, dk_2 \int_{-1}^1 \frac{du}{k_1^2 + k_2^2 - 2 k_1 k_2 u} \\
+  &= \frac{2\pi}{k_1}\!\int_0^{k_F}\!\! k_2 \ln\!\left|\frac{k_1+k_2}{k_1-k_2}\right| dk_2.
+\end{align}
+
+The remaining 1D integral is evaluated by parts with $u=\ln\!\big|\frac{k_1+k_2}{k_1-k_2}\big|$, $dv = k_2\, dk_2$ (so $du = \frac{2k_1}{k_1^2-k_2^2}dk_2$, $v = k_2^2/2$):
+\begin{align}
+  \int_0^{k_F}\!\!k_2\ln\!\left|\frac{k_1+k_2}{k_1-k_2}\right| dk_2
+  &= \frac{k_F^2}{2}\ln\!\left|\frac{k_F+k_1}{k_F-k_1}\right| - k_1\!\int_0^{k_F}\!\frac{k_2^2}{k_1^2-k_2^2}dk_2 \nonumber\\
+  &= \frac{k_F^2-k_1^2}{2}\ln\!\left|\frac{k_F+k_1}{k_F-k_1}\right| + k_1 k_F,
+\end{align}
+where we used $\int_0^{k_F}\frac{k_2^2}{k_1^2-k_2^2}dk_2 = -k_F + \frac{k_1}{2}\ln\!\big|\frac{k_F+k_1}{k_F-k_1}\big|$.  Hence
+\begin{equation}
+  J(k_1) = \pi\!\left[\,2 k_F + \frac{k_F^2 - k_1^2}{k_1}\ln\!\left|\frac{k_F+k_1}{k_F-k_1}\right|\right].
+\end{equation}
+
+By spherical symmetry, the outer integral becomes
+\begin{align}
+  \mathcal{I} &\equiv \int_{\|\mathbf{k}_1\|<k_F}\!\!J(k_1)\, d^3\mathbf{k}_1 = 4\pi\!\int_0^{k_F}\!\! k_1^2\, J(k_1)\, dk_1 \nonumber\\
+  &= 8\pi^2\!\left[\,k_F\!\int_0^{k_F}\!\! k_1^2\, dk_1 \;+\; \tfrac{1}{2}\!\int_0^{k_F}\!\! k_1(k_F^2 - k_1^2)\ln\!\frac{k_F+k_1}{k_F-k_1}\, dk_1\right].
+\end{align}
+
+The first term is $k_F^4/3$.  For the second, substitute $x = k_1/k_F$ and use the Taylor series $\ln\frac{1+x}{1-x} = 2\sum_{n\ge 0}\frac{x^{2n+1}}{2n+1}$:
+\begin{align}
+  \int_0^{k_F}\!\! k_1(k_F^2 - k_1^2)\ln\!\frac{k_F+k_1}{k_F-k_1}\, dk_1
+  &= k_F^4\!\int_0^1\!\! x(1-x^2)\ln\!\frac{1+x}{1-x}\, dx \nonumber\\
+  &= 2\, k_F^4 \sum_{n=0}^\infty \frac{1}{2n+1}\!\left(\frac{1}{2n+3}-\frac{1}{2n+5}\right) \nonumber\\
+  &= 4\, k_F^4\sum_{n=0}^\infty \frac{1}{(2n+1)(2n+3)(2n+5)}.
+\end{align}
+
+The series sums via partial fractions:
+\[
+  \frac{1}{(2n+1)(2n+3)(2n+5)} = \frac{1}{8}\!\left[\frac{1}{2n+1} - \frac{2}{2n+3} + \frac{1}{2n+5}\right],
+\]
+which telescopes (only the $n=0$ and $n=1$ edge terms survive) to
+\[
+  \sum_{n=0}^\infty\frac{1}{(2n+1)(2n+3)(2n+5)} = \frac{1}{8}\!\left(1 - \frac{1}{3}\right) = \frac{1}{12}.
+\]
+Hence the second term equals $k_F^4/3$, and
+\begin{equation}
+  \mathcal{I} = 8\pi^2\!\left[\frac{k_F^4}{3} + \frac{1}{2}\cdot\frac{k_F^4}{3}\right] = 4\pi^2\, k_F^4.
+\end{equation}
+
+Substituting back,
+\begin{equation}
+  \frac{E^{(1)}}{N} = -\frac{e^2}{64\pi^6 \varepsilon_0}\,\frac{V}{N}\cdot 4\pi^2 k_F^4 = -\frac{e^2 k_F^4}{16\pi^4 \varepsilon_0}\,\frac{V}{N}.
+\end{equation}
+For a 3D free electron gas, $N/V = k_F^3/(3\pi^2)$, so $V/N = 3\pi^2/k_F^3$, Therefore,
+\begin{equation}
+  \frac{E^{(1)}}{N} = -\frac{3 e^2 k_F}{16\pi^2 \varepsilon_0}.
+\end{equation}
+
+To convert this into atomic units, recall that the Wigner--Seitz radius $r_s$ is defined by $\tfrac{4\pi}{3}(r_s a_0)^3 = V/N$, where the Bohr radius in SI units reads $a_0 = \dfrac{4\pi\varepsilon_0 \hbar^2}{m_e e^2}$.  Combined with $V/N = 3\pi^2/k_F^3$,
+\begin{equation}
+  k_F a_0 = \left(\frac{9\pi}{4}\right)^{1/3}\frac{1}{r_s}.
+\end{equation}
+The Rydberg energy in SI is $\text{Ry} = \dfrac{e^2}{8\pi\varepsilon_0 a_0}$, equivalently $\dfrac{e^2}{\varepsilon_0} = 8\pi\, a_0\,\text{Ry}$.  Therefore
+\begin{equation}
+  \frac{E^{(1)}}{N} = -\frac{3 e^2 k_F}{16\pi^2 \varepsilon_0} = -\frac{3\,(k_F a_0)}{2\pi}\,\text{Ry} = -\frac{3}{2\pi}\!\left(\frac{9\pi}{4}\right)^{1/3}\!\frac{1}{r_s}\,\text{Ry}.
+\end{equation}
+
+Evaluating the numerical prefactor,
+\begin{equation}
+  \frac{3}{2\pi}\!\left(\frac{9\pi}{4}\right)^{1/3} = \frac{3}{2\pi}(1.91915\ldots) = 0.91633\ldots,
+\end{equation}
+
+Therefore, the first-order correction is
+\begin{equation}
+  \frac{E^{(1)}}{N}\;\simeq\;-\frac{0.916}{r_s}\;[\text{Ry}].
+\end{equation}
+\qed
+
+
+
+
+
+\end{document}

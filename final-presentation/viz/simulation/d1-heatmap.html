@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>D1 · Supp. Fig 5 시뮬레이션 (열평균 컨덕턴스)</title>
+<link rel="stylesheet" href="../shared/style.css">
+</head>
+<body>
+<header>
+  <h1>D1 · ν=1/3 Fabry–Pérot 시뮬레이션 — Supp. Fig 5</h1>
+  <p>⟨δG⟩(B,δV_g) = (1/Z) Σ<sub>N</sub> e<sup>−E(N)/kT</sup> cos(2π(e*/e)A_I B/Φ₀ + N·θ<sub>anyon</sub>) · 픽셀 적합 기본값 탑재. · <a href="../index.html">← 갤러리</a></p>
+</header>
+
+<div class="wrap">
+  <div class="plots">
+    <div class="card">
+      <h2>컨덕턴스 맵 δG(B, δV_g)<span class="tag" id="tt">kT/E_c</span></h2>
+      <canvas id="map" width="760" height="340"></canvas>
+    </div>
+    <div class="card">
+      <h2>⟨N_qp⟩ vs B  (δV_g = 0 라인컷)</h2>
+      <canvas id="nqp" width="760" height="170"></canvas>
+    </div>
+  </div>
+  <div class="controls">
+    <div class="card">
+      <h2>비고정 파라미터</h2>
+      <div class="slider"><label>온도 kT/E_c <b id="v_r">0.020</b></label>
+        <input id="s_r" type="range" min="-3.1" max="-0.7" step="0.01" value="-1.699">
+        <div class="sub">로그 · 패널 a/b/c = 0.002 / 0.02 / 0.1 · T≈<span id="v_T">39</span> mK</div></div>
+      <div class="slider"><label>A₀ <b id="v_A0">0.098</b> μm²</label>
+        <input id="s_A0" type="range" min="0.05" max="0.25" step="0.001" value="0.098"></div>
+      <div class="slider"><label>∂A/∂V_g <b id="v_dad">0.120</b> μm²/V</label>
+        <input id="s_dad" type="range" min="0.04" max="0.22" step="0.001" value="0.120"></div>
+      <div class="slider"><label>Δ_qp/E_c <b id="v_dqe">1.07</b></label>
+        <input id="s_dqe" type="range" min="0.2" max="2.6" step="0.01" value="1.07"></div>
+      <div class="slider"><label>B_center <b id="v_Bc">8.653</b> T</label>
+        <input id="s_Bc" type="range" min="8.40" max="8.90" step="0.005" value="8.653"></div>
+      <div class="slider"><label>α_bulk <b id="v_ab">0.100</b> mV⁻¹</label>
+        <input id="s_ab" type="range" min="0.0" max="0.16" step="0.002" value="0.100"></div>
+      <button id="reset">픽셀 적합값으로 리셋</button>
+    </div>
+    <div class="card">
+      <h2>실시간 도출량</h2>
+      <div class="readout">
+        <div><span>AB 기울기</span><b id="o_slope">–</b></div>
+        <div><span>B-주기</span><b id="o_Bper">–</b></div>
+        <div><span>Vg-주기</span><b id="o_Vper">–</b></div>
+        <div><span>central 폭</span><b id="o_cen">–</b></div>
+        <div><span>transition 기울기</span><b id="o_ts">–</b></div>
+        <div><span>E_c</span><b id="o_Ec">–</b></div>
+      </div>
+      <div class="sub" style="margin-top:8px">픽셀 측정: 기울기 −95 · B-주기 127 mT · Vg-주기 12.2 mV · central 447 mT · side Vg 9.7 mV</div>
+    </div>
+  </div>
+</div>
+
+<script src="../shared/physics.js"></script>
+<script src="../shared/render.js"></script>
+<script>
+"use strict";
+const el=id=>document.getElementById(id);
+const NB=300, NV=160;
+const map=document.getElementById('map'), mctx=map.getContext('2d');
+const nqp=document.getElementById('nqp'), nctx=nqp.getContext('2d');
+const hm=VZ.makeHeatmap(NB,NV);
+
+function params(){ return {
+  ratio:Math.pow(10,parseFloat(el('s_r').value)), A0:parseFloat(el('s_A0').value)*1e-12,
+  dad:parseFloat(el('s_dad').value)*1e-12, dqe:parseFloat(el('s_dqe').value),
+  Bc:parseFloat(el('s_Bc').value), ab:parseFloat(el('s_ab').value) }; }
+
+let last=null;
+function drawMap(g,p){
+  VZ.paintHeatmap(hm,g.dG,g.vmax,'div');
+  const W=map.width,H=map.height; mctx.fillStyle='#000'; mctx.fillRect(0,0,W,H);
+  const box={x:52,y:24,w:W-76,h:H-54};
+  mctx.imageSmoothingEnabled=true; mctx.drawImage(hm.buf,box.x,box.y,box.w,box.h);
+  const m=VZ.frame(mctx,box,{xr:[8.2,9.1],yr:[-30,0],xstep:0.1,ystep:5,xlabel:'B (T)',ylabel:'δV_g (mV)'});
+  // central region from |<N>|<0.5
+  let lo=-1,hi=-1; for(let ix=0;ix<NB;ix++){ if(Math.abs(g.nqpTop[ix])<0.5){ if(lo<0)lo=ix; hi=ix; } }
+  if(lo>=0){ const Bl=8.2+0.9*lo/(NB-1), Bh=8.2+0.9*hi/(NB-1);
+    mctx.strokeStyle='rgba(255,255,255,.85)'; mctx.setLineDash([5,4]);
+    for(const B of [Bl,Bh]){ mctx.beginPath(); mctx.moveTo(m.X(B),box.y); mctx.lineTo(m.X(B),box.y+box.h); mctx.stroke(); }
+    mctx.setLineDash([]); mctx.fillStyle='#fff'; mctx.font='11px sans-serif'; mctx.textAlign='center';
+    mctx.fillText('Quasiparticle Φ₀', m.X((8.2+Bl)/2), box.y+12);
+    mctx.fillText('Pure AB 3Φ₀', m.X((Bl+Bh)/2), box.y+12);
+    mctx.fillText('Quasihole Φ₀', m.X((Bh+9.1)/2), box.y+12); }
+}
+function drawNqp(g){
+  const W=nqp.width,H=nqp.height; nctx.fillStyle='#0c0e12'; nctx.fillRect(0,0,W,H);
+  const box={x:52,y:12,w:W-76,h:H-40};
+  let amax=1; for(let i=0;i<NB;i++) amax=Math.max(amax,Math.abs(g.nqpTop[i])); amax=Math.ceil(amax);
+  const X=b=>box.x+(b-8.2)/0.9*box.w, Y=n=>box.y+(amax-n)/(2*amax)*box.h;
+  nctx.strokeStyle='#333'; nctx.beginPath(); nctx.moveTo(box.x,Y(0)); nctx.lineTo(box.x+box.w,Y(0)); nctx.stroke();
+  nctx.strokeStyle='#4ea1ff'; nctx.lineWidth=1.8; nctx.beginPath();
+  for(let i=0;i<NB;i++){ const b=8.2+0.9*i/(NB-1); const x=X(b),y=Y(g.nqpTop[i]); if(i===0)nctx.moveTo(x,y); else nctx.lineTo(x,y);} nctx.stroke();
+  VZ.frame(nctx,box,{xr:[8.2,9.1],yr:[-amax,amax],xstep:0.1,ystep:amax,xlabel:'B (T)',ylabel:'⟨N_qp⟩',yfmt:v=>(v>0?'+':'')+v.toFixed(0)});
+}
+function readouts(p){
+  const d=FQH.derived(p);
+  el('v_r').textContent=p.ratio.toFixed(3); el('v_A0').textContent=(p.A0*1e12).toFixed(3);
+  el('v_dad').textContent=(p.dad*1e12).toFixed(3); el('v_dqe').textContent=p.dqe.toFixed(2);
+  el('v_Bc').textContent=p.Bc.toFixed(3); el('v_ab').textContent=p.ab.toFixed(3);
+  el('v_T').textContent=(p.ratio*d.Ec*1e3).toFixed(0);
+  el('o_slope').textContent=d.slope.toFixed(0)+' mV/T'; el('o_Bper').textContent=d.Bper.toFixed(0)+' mT';
+  el('o_Vper').textContent=d.Vper.toFixed(1)+' mV'; el('o_cen').textContent=d.cen.toFixed(0)+' mT';
+  el('o_ts').textContent='+'+d.transSlope.toFixed(0)+' mV/T'; el('o_Ec').textContent=d.Ec.toFixed(2)+' K';
+}
+let pending=false;
+function render(){ pending=false; const p=params(); readouts(p);
+  const g=FQH.grid(p,NB,NV); drawMap(g,p); drawNqp(g); }
+function schedule(){ if(!pending){ pending=true; requestAnimationFrame(render); } }
+for(const id of ['s_r','s_A0','s_dad','s_dqe','s_Bc','s_ab']) el(id).addEventListener('input',schedule);
+const DEF={s_r:'-1.699',s_A0:'0.098',s_dad:'0.120',s_dqe:'1.07',s_Bc:'8.653',s_ab:'0.100'};
+el('reset').addEventListener('click',()=>{ for(const k in DEF) el(k).value=DEF[k]; schedule(); });
+render();
+</script>
+</body>
+</html>

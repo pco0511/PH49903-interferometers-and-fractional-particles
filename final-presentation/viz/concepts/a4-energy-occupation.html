@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>A4 · E(N_qp) 포물선과 열점유</title>
+<link rel="stylesheet" href="../shared/style.css">
+</head>
+<body>
+<header>
+  <h1>A4 · 에너지 E(N_qp)와 Boltzmann 열점유 → ⟨N_qp⟩</h1>
+  <p>Supp. Eqn 7 · E(N)/E_c = δq_net² + (Δ_qp/E_c)|N| · charging 포물선의 꼭짓점이 정수 N 사이를 지날 때 최저 상태가 바뀌며 phase slip이 생기고, 열평균이 ⟨N_qp⟩ 계단을 만든다. · <a href="../index.html">← 갤러리</a></p>
+</header>
+
+<div class="wrap">
+  <div class="plots">
+    <div class="card">
+      <h2>E(N) [E_c 단위]  ·  Boltzmann 가중 e<sup>−E/kT</sup></h2>
+      <canvas id="en" width="760" height="300"></canvas>
+    </div>
+    <div class="card">
+      <h2>⟨N_qp⟩ vs B  (현재 B 표시)</h2>
+      <canvas id="nq" width="760" height="160"></canvas>
+    </div>
+  </div>
+  <div class="controls">
+    <div class="card">
+      <h2>제어</h2>
+      <div class="slider">
+        <label>자기장 B <b id="v_B">8.653</b> T</label>
+        <input id="s_B" type="range" min="8.2" max="9.1" step="0.001" value="8.653">
+        <div class="sub">포물선 꼭짓점 N* = −δq_off/(e*/e) 이동</div>
+      </div>
+      <div class="slider">
+        <label>온도 kT/E_c <b id="v_T">0.020</b></label>
+        <input id="s_T" type="range" min="-3.1" max="-0.7" step="0.01" value="-1.699">
+        <div class="sub">로그 · 가중 막대 폭 = thermal smearing</div>
+      </div>
+      <div class="slider">
+        <label>Δ_qp/E_c <b id="v_D">1.07</b></label>
+        <input id="s_D" type="range" min="0.0" max="2.6" step="0.01" value="1.07">
+        <div class="sub">|N|에 비례하는 gap 사다리(생성 비용)</div>
+      </div>
+    </div>
+    <div class="card">
+      <h2>현재 상태</h2>
+      <div class="readout">
+        <div><span>꼭짓점 N*</span><b id="o_ns">–</b></div>
+        <div><span>최저에너지 N</span><b id="o_n0">–</b></div>
+        <div><span>⟨N_qp⟩</span><b id="o_nq">–</b></div>
+        <div><span>유효 상태수</span><b id="o_eff">–</b></div>
+      </div>
+      <div class="sub" style="margin-top:8px">파랑 점 = E(N), 막대 높이 = 점유확률, 빨강 = ⟨N_qp⟩.</div>
+    </div>
+  </div>
+</div>
+
+<script src="../shared/physics.js"></script>
+<script src="../shared/render.js"></script>
+<script>
+"use strict";
+const el=id=>document.getElementById(id), PHI0=FQH.PHI0, ESTAR=1/3, NU=1/3;
+const A0=0.098e-12, DAD=0.120e-12, AB=0.100, Bc=8.653;
+const en=document.getElementById('en'), ectx=en.getContext('2d');
+const nq=document.getElementById('nq'), nctx=nq.getContext('2d');
+const qd=NU*A0*Bc/PHI0;
+
+function offOf(B,V){ const A=A0+DAD*(V*1e-3); return NU*A*B/PHI0 - qd - AB*V; }
+function energies(B,dqe){
+  const off=offOf(B,0); const arr=[];
+  const Nstar=Math.round(-off/ESTAR);
+  for(let N=Nstar-7;N<=Nstar+7;N++){ const dq=off+ESTAR*N; arr.push({N:N,E:dq*dq+dqe*Math.abs(N)}); }
+  return {arr:arr,Nstar:-off/ESTAR};
+}
+function drawEN(B,ratio,dqe){
+  const W=en.width,H=en.height; ectx.fillStyle='#000'; ectx.fillRect(0,0,W,H);
+  const g={x:46,y:16,w:W-70,h:H-44};
+  const {arr,Nstar}=energies(B,dqe);
+  let minE=Infinity,maxE=-Infinity,Nlo=Infinity,Nhi=-Infinity;
+  for(const o of arr){ minE=Math.min(minE,o.E); maxE=Math.max(maxE,o.E); Nlo=Math.min(Nlo,o.N); Nhi=Math.max(Nhi,o.N); }
+  maxE=Math.min(maxE,minE+ (Math.max(6,dqe*6)) );   // clip y for visibility
+  const X=N=>g.x+(N-Nlo)/(Nhi-Nlo)*g.w, Y=E=>g.y+(E-minE)/(maxE-minE)*g.h;
+  // boltzmann weights
+  let Z=0; const w=arr.map(o=>{const ww=Math.exp(-(o.E-minE)/ratio); Z+=ww; return ww;});
+  let nqv=0,eff=0; for(let i=0;i<arr.length;i++){ nqv+=arr[i].N*w[i]/Z; eff+=Math.pow(w[i]/Z,2);} eff=1/eff;
+  // weight bars (from bottom)
+  for(let i=0;i<arr.length;i++){ const p=w[i]/Z; const x=X(arr[i].N);
+    ectx.fillStyle='rgba(143,255,143,.45)'; const bh=p*(g.h*0.9); ectx.fillRect(x-7,g.y+g.h-bh,14,bh); }
+  // parabola guide (continuous charging term, |N| ladder omitted)
+  ectx.strokeStyle='rgba(78,161,255,.35)'; ectx.lineWidth=1; ectx.beginPath();
+  for(let i=0;i<=200;i++){ const N=Nlo+(Nhi-Nlo)*i/200; const off=offOf(B,0); const dq=off+ESTAR*N; const E=dq*dq+dqe*Math.abs(N);
+    const x=X(N),y=Y(Math.min(E,maxE)); if(i===0)ectx.moveTo(x,y); else ectx.lineTo(x,y);} ectx.stroke();
+  // E(N) points
+  let n0=arr[0]; for(const o of arr) if(o.E<n0.E)n0=o;
+  for(const o of arr){ if(o.E>maxE)continue; ectx.fillStyle=(o===n0)?'#ffd27d':'#4ea1ff';
+    ectx.beginPath(); ectx.arc(X(o.N),Y(o.E),o===n0?5:3.5,0,2*Math.PI); ectx.fill(); }
+  // <N> marker on axis
+  ectx.strokeStyle='#ff5a5a'; ectx.lineWidth=1.5; ectx.setLineDash([4,3]);
+  ectx.beginPath(); ectx.moveTo(X(nqv),g.y); ectx.lineTo(X(nqv),g.y+g.h); ectx.stroke(); ectx.setLineDash([]);
+  ectx.fillStyle='#ff5a5a'; ectx.font='11px sans-serif'; ectx.textAlign='center'; ectx.fillText('⟨N⟩',X(nqv),g.y-2);
+  VZ.frame(ectx,g,{xr:[Nlo,Nhi],yr:[minE,maxE],xstep:Math.max(1,Math.round((Nhi-Nlo)/8)),ystep:(maxE-minE)/4,xlabel:'N_qp',ylabel:'E / E_c',yfmt:v=>v.toFixed(1)});
+  el('o_ns').textContent=Nstar.toFixed(2); el('o_n0').textContent=n0.N;
+  el('o_nq').textContent=nqv.toFixed(2); el('o_eff').textContent=eff.toFixed(1);
+}
+function drawNq(B,ratio,dqe){
+  const W=nq.width,H=nq.height; nctx.fillStyle='#0c0e12'; nctx.fillRect(0,0,W,H);
+  const g={x:50,y:12,w:W-70,h:H-40};
+  const P={A0:A0,dad:DAD,dqe:dqe,Bc:Bc,ab:AB,ratio:ratio};
+  let amax=1; const ys=[];
+  for(let i=0;i<=240;i++){ const b=8.2+0.9*i/240; const n=FQH.point(b,0,FQH.norm(P)).N; ys.push(n); amax=Math.max(amax,Math.abs(n)); }
+  amax=Math.ceil(amax);
+  const X=b=>g.x+(b-8.2)/0.9*g.w, Y=n=>g.y+(amax-n)/(2*amax)*g.h;
+  nctx.strokeStyle='#333'; nctx.beginPath(); nctx.moveTo(g.x,Y(0)); nctx.lineTo(g.x+g.w,Y(0)); nctx.stroke();
+  nctx.strokeStyle='#4ea1ff'; nctx.lineWidth=1.8; nctx.beginPath();
+  for(let i=0;i<ys.length;i++){ const b=8.2+0.9*i/240; const x=X(b),y=Y(ys[i]); if(i===0)nctx.moveTo(x,y); else nctx.lineTo(x,y);} nctx.stroke();
+  nctx.strokeStyle='#ffd27d'; nctx.setLineDash([4,3]); nctx.beginPath(); nctx.moveTo(X(B),g.y); nctx.lineTo(X(B),g.y+g.h); nctx.stroke(); nctx.setLineDash([]);
+  VZ.frame(nctx,g,{xr:[8.2,9.1],yr:[-amax,amax],xstep:0.1,ystep:amax,xlabel:'B (T)',ylabel:'⟨N_qp⟩'});
+}
+function render(){
+  const B=parseFloat(el('s_B').value), ratio=Math.pow(10,parseFloat(el('s_T').value)), dqe=parseFloat(el('s_D').value);
+  el('v_B').textContent=B.toFixed(3); el('v_T').textContent=ratio.toFixed(3); el('v_D').textContent=dqe.toFixed(2);
+  drawEN(B,ratio,dqe); drawNq(B,ratio,dqe);
+}
+for(const id of ['s_B','s_T','s_D']) el(id).addEventListener('input',render);
+render();
+</script>
+</body>
+</html>
