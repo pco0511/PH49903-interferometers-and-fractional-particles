@@ -15,9 +15,10 @@
     color:var(--ink); overflow:hidden;
     display:flex; align-items:center; justify-content:center;
   }
-  /* fixed 16:9 stage, scaled to fit the window by JS */
+  /* fixed 16:9 stage, scaled to fit the window by JS.
+     flex:none -> never let the flexbox shrink the 1280px width (that squished it). */
   #stage{
-    position:relative; width:1280px; height:720px;
+    position:relative; width:1280px; height:720px; flex:none;
     background:#fff; transform-origin:center center;
     box-shadow:0 0 40px rgba(0,0,0,.4);
   }
@@ -30,19 +31,26 @@
     padding-bottom:12px; border-bottom:1px solid var(--hair); flex:0 0 auto;
   }
   .slide-sub{ font-size:18px; color:var(--sub); margin-top:10px; font-weight:400; flex:0 0 auto; }
+
   .figwrap{ position:relative; flex:1 1 auto; min-height:0; display:flex; align-items:center; justify-content:center; margin-top:14px; overflow:hidden; }
   .figwrap iframe{ position:absolute; top:50%; left:50%; transform-origin:center center; border:0; background:transparent; }
   .figwrap img{ max-width:100%; max-height:100%; object-fit:contain; }
   .figwrap svg{ max-width:100%; max-height:100%; }
+  .figwrap canvas.customfig{ max-width:100%; max-height:100%; background:#fff; }
   .figwrap .ph{ color:#bbb; font-size:18px; font-style:italic; }
 
-  /* step captions revealed one-by-one */
+  /* multi-column layout */
+  .cols{ flex:1 1 auto; min-height:0; display:flex; gap:28px; margin-top:14px; }
+  .cols .col{ flex:1 1 0; min-width:0; display:flex; flex-direction:column; }
+  .cols .col .figwrap{ margin-top:0; }
+  .cols .col .colbody{ flex:0 0 auto; margin-top:10px; font-size:18px; line-height:1.45; }
+  /* 6-up grid (summary) */
+  .cols.grid{ display:grid; grid-template-columns:repeat(3,1fr); grid-template-rows:1fr 1fr; gap:12px 18px; }
+  .cols.grid .col .colbody{ font-size:13px; color:var(--sub); margin-top:4px; text-align:center; }
+
+  /* steps: all shown at once (no sequential reveal) */
   .steps{ flex:0 0 auto; margin-top:12px; display:flex; flex-direction:column; gap:6px; }
-  .steps .step{
-    font-size:20px; color:#222; line-height:1.3;
-    opacity:0; transform:translateY(4px); transition:opacity .12s, transform .12s;
-  }
-  .steps .step.show{ opacity:1; transform:none; }
+  .steps .step{ font-size:20px; color:#222; line-height:1.35; }
   .steps .step::before{ content:"▸ "; color:var(--accent); }
 
   /* footer */
@@ -53,11 +61,13 @@
   }
 
   /* cover */
-  .cover{ justify-content:center; padding:0 96px; }
+  .cover{ justify-content:center; padding:0 90px; }
   .cover .eyebrow{ font-size:16px; color:var(--sub); letter-spacing:.12em; text-transform:uppercase; }
-  .cover h1{ font-size:48px; font-weight:600; line-height:1.12; letter-spacing:-.015em; margin:22px 0 26px; max-width:1040px; }
-  .cover .cite{ font-size:20px; color:#333; }
-  .cover .meta{ font-size:16px; color:var(--sub); margin-top:42px; }
+  .cover h1{ font-size:42px; font-weight:600; line-height:1.12; letter-spacing:-.015em; margin:18px 0 18px; max-width:1080px; }
+  .cover .cite{ font-size:19px; color:#333; }
+  .cover .coverfig{ margin:26px 0 6px; height:200px; display:flex; align-items:center; }
+  .cover .coverfig svg{ height:200px; max-width:100%; }
+  .cover .meta{ font-size:16px; color:var(--sub); margin-top:14px; }
 
   /* divider */
   .divider{ justify-content:center; padding:0 96px; }
@@ -76,120 +86,127 @@
 <script src="vendor/katex/contrib/auto-render.min.js"></script>
 <script>
 // ============================================================================
-// deck definition. LaTeX note: backslashes MUST be doubled in these JS strings
-//   ( '$\\theta$' not '$\theta$' — '\t' would become a TAB ).
-// fig:  {kind:'iframe'|'img'|'svg', src?, html?}     steps: [ 'caption html', ... ]
+// deck. LaTeX in JS strings: DOUBLE every backslash ('\\theta'); use &lt; for '<'.
+// content slide: either { fig, steps } OR { cols:[{fig,body},...], grid? }
+// NOTE: figures are TEMPORARY embeds for testing; the real talk rebuilds each
+//       slide custom (see notes/slide-build-spec.md).
 // ============================================================================
-const V = '../viz/';          // viz embeds (chrome hidden via ?embed=fig)
-const F = '../figures/';      // rendered paper figures
-const R = '../ref-crops/';    // extracted crops
+const V = '../viz/';
+const F = '../figures/';
+const R = '../ref-crops/';
+
+// Laughlin droplet figure (light, reused on the merged Recall slide)
+const LAUGHLIN_SVG = `<svg viewBox="0 0 720 380" xmlns="http://www.w3.org/2000/svg" font-family="Helvetica Neue,Arial,sans-serif">
+  <circle cx="240" cy="185" r="160" fill="#eaf2fb" stroke="#2b4a6f" stroke-width="2"/>
+  <text x="240" y="370" text-anchor="middle" font-size="16" fill="#2b4a6f">ν = 1/3 incompressible liquid</text>
+  <g fill="#1a2330">
+    <circle cx="160" cy="105" r="4"/><circle cx="220" cy="90" r="4"/><circle cx="300" cy="115" r="4"/>
+    <circle cx="350" cy="165" r="4"/><circle cx="360" cy="210" r="4"/><circle cx="330" cy="250" r="4"/>
+    <circle cx="290" cy="305" r="4"/><circle cx="220" cy="325" r="4"/><circle cx="150" cy="295" r="4"/>
+    <circle cx="110" cy="205" r="4"/><circle cx="120" cy="145" r="4"/><circle cx="190" cy="245" r="4"/>
+    <circle cx="265" cy="150" r="4"/><circle cx="170" cy="195" r="4"/><circle cx="245" cy="255" r="4"/>
+  </g>
+  <ellipse cx="210" cy="200" rx="86" ry="62" fill="none" stroke="#1565c0" stroke-width="2.5" stroke-dasharray="7 5"/>
+  <path d="M296 196 l8 4 -8 4 z" fill="#1565c0"/>
+  <circle cx="210" cy="200" r="15" fill="#fff" stroke="#c0392b" stroke-width="2.5" stroke-dasharray="4 3"/>
+  <text x="210" y="205" text-anchor="middle" font-size="15" fill="#c0392b" font-weight="700">+</text>
+  <circle cx="296" cy="200" r="9" fill="#1565c0"/>
+  <text x="296" y="178" text-anchor="middle" font-size="13" fill="#1565c0">qp</text>
+  <g font-size="16" fill="#222">
+    <circle cx="476" cy="96" r="4" fill="#1a2330"/><text x="492" y="101">electron</text>
+    <circle cx="476" cy="140" r="11" fill="#fff" stroke="#c0392b" stroke-width="2.5" stroke-dasharray="4 3"/>
+    <text x="496" y="145">quasihole&#160;&#160;(e* = e/3)</text>
+    <path d="M462 184 a14 10 0 1 1 0.1 0" fill="none" stroke="#1565c0" stroke-width="2.5" stroke-dasharray="6 4"/>
+    <text x="496" y="189">braid = encircle = 2 exchanges</text>
+  </g>
+  <text x="468" y="240" font-size="22" fill="#1565c0" font-weight="700">→ statistical phase 2π/3</text>
+</svg>`;
+
+// cover figure: braid  ≡  Fabry–Perot interferometer
+const COVER_SVG = `<svg viewBox="0 0 980 210" xmlns="http://www.w3.org/2000/svg" font-family="Helvetica Neue,Arial,sans-serif">
+  <!-- braid: two strands, double exchange -->
+  <path d="M40 55 C 110 55 110 150 180 150 C 250 150 250 55 320 55" fill="none" stroke="#1565c0" stroke-width="7"/>
+  <path d="M40 150 C 110 150 110 55 180 55 C 250 55 250 150 320 150" fill="none" stroke="#fff" stroke-width="13"/>
+  <path d="M40 150 C 110 150 110 55 180 55 C 250 55 250 150 320 150" fill="none" stroke="#e8852b" stroke-width="7"/>
+  <text x="180" y="195" text-anchor="middle" font-size="16" fill="#333">anyonic braiding → 2π/3</text>
+  <!-- equivalence -->
+  <text x="400" y="108" text-anchor="middle" font-size="34" fill="#999">≡</text>
+  <!-- interferometer -->
+  <g stroke="#2b4a6f" fill="none" stroke-width="3">
+    <rect x="560" y="58" width="300" height="92" rx="10" fill="#eaf2fb"/>
+    <!-- QPC constrictions (gates pinching the edge) at left & right -->
+    <rect x="545" y="24" width="30" height="40" rx="5" fill="#d9c98a" stroke="#9c8b4a"/>
+    <rect x="545" y="146" width="30" height="40" rx="5" fill="#d9c98a" stroke="#9c8b4a"/>
+    <rect x="845" y="24" width="30" height="40" rx="5" fill="#d9c98a" stroke="#9c8b4a"/>
+    <rect x="845" y="146" width="30" height="40" rx="5" fill="#d9c98a" stroke="#9c8b4a"/>
+  </g>
+  <!-- edge current path -->
+  <path d="M470 104 L548 104 M872 104 L950 104" stroke="#c0392b" stroke-width="3" fill="none"/>
+  <path d="M548 104 l-12 -5 0 10 z" fill="#c0392b"/>
+  <path d="M950 104 l-12 -5 0 10 z" fill="#c0392b"/>
+  <circle cx="690" cy="104" r="7" fill="none" stroke="#c0392b" stroke-width="2.5"/>
+  <circle cx="730" cy="104" r="7" fill="none" stroke="#c0392b" stroke-width="2.5"/>
+  <text x="710" y="200" text-anchor="middle" font-size="16" fill="#333">Fabry–Pérot interferometer</text>
+  <text x="572" y="48" font-size="12" fill="#777">QPC₁</text><text x="872" y="48" font-size="12" fill="#777">QPC₂</text>
+</svg>`;
 
 const DECK = [
   { type:'cover',
     eyebrow:'PH49903 · Interferometers and Fractional Particles',
     title:'Direct Observation of Anyonic Braiding Statistics at the ν = 1/3 Fractional Quantum Hall State',
     cite:'Nakamura, Liang, Gardner & Manfra · Nature Physics 16, 931 (2020) · arXiv:2006.14115',
+    figSvg: COVER_SVG,
     meta:'[Presenter] · 2026' },
 
   // ---- Part 1 : Recall -----------------------------------------------------
-  { type:'divider', section:'Recall', kicker:'Part 1 · ~1 min', title:'Recall' },
+  { type:'divider', section:'Recall', kicker:'Part 1', title:'Recall' },
 
+  // merged: Laughlin (left, with wavefunction) + braiding animation (right)
   { type:'content', section:'Recall',
     title:'Fractional Braiding Statistics of Laughlin Quasiparticles',
-    fig:{ kind:'iframe', src:V+'concepts/a1-braiding.html?embed=fig', w:820, h:480 },
-    steps:[
-      'Exchange two quasiparticles once $\\;\\to\\; e^{i\\theta_{\\mathrm{ex}}}$',
-      'Braiding = encircle = two exchanges $\\;\\to\\; e^{i2\\theta_{\\mathrm{ex}}}$ (path-independent)',
-      '$\\nu=1/3:\\;\\; \\theta_{\\mathrm{ex}}=\\pi/3 \\;\\Rightarrow\\; \\theta_{\\mathrm{braid}}=2\\pi/3$',
+    cols:[
+      { fig:{ kind:'svg', html:LAUGHLIN_SVG },
+        body:'$\\Psi_m=\\prod_{i&lt;j}(z_i-z_j)^m\\,e^{-\\sum_k|z_k|^2/4\\ell_B^2}\\;(m{=}3)$<br>'
+            +'quasihole&nbsp; $\\prod_i (z_i-\\eta)\\,\\Psi_m \\;\\Rightarrow\\; e^*=e/3$' },
+      { fig:{ kind:'iframe', src:V+'concepts/a1-braiding.html?embed=fig&light=1', w:1000, h:480 },
+        body:'encircle = two exchanges $\\;\\Rightarrow\\; \\theta_{\\mathrm{braid}}=2\\theta_{\\mathrm{ex}}=2\\pi/3$' },
     ] },
 
-  { type:'content', section:'Recall',
-    title:'Laughlin Quasiparticles',
-    fig:{ kind:'svg', html:`<svg viewBox="0 0 720 380" xmlns="http://www.w3.org/2000/svg" font-family="Helvetica Neue,Arial,sans-serif">
-      <circle cx="240" cy="185" r="160" fill="#eaf2fb" stroke="#2b4a6f" stroke-width="2"/>
-      <text x="240" y="370" text-anchor="middle" font-size="16" fill="#2b4a6f">ν = 1/3 incompressible liquid</text>
-      <g fill="#1a2330">
-        <circle cx="160" cy="105" r="4"/><circle cx="220" cy="90" r="4"/><circle cx="300" cy="115" r="4"/>
-        <circle cx="350" cy="165" r="4"/><circle cx="360" cy="210" r="4"/><circle cx="330" cy="250" r="4"/>
-        <circle cx="290" cy="305" r="4"/><circle cx="220" cy="325" r="4"/><circle cx="150" cy="295" r="4"/>
-        <circle cx="110" cy="205" r="4"/><circle cx="120" cy="145" r="4"/><circle cx="190" cy="245" r="4"/>
-        <circle cx="265" cy="150" r="4"/><circle cx="170" cy="195" r="4"/><circle cx="245" cy="255" r="4"/>
-      </g>
-      <!-- braiding path: quasiparticle B encircles quasihole A -->
-      <ellipse cx="210" cy="200" rx="86" ry="62" fill="none" stroke="#1565c0" stroke-width="2.5" stroke-dasharray="7 5"/>
-      <path d="M296 196 l8 4 -8 4 z" fill="#1565c0"/>
-      <!-- quasihole A -->
-      <circle cx="210" cy="200" r="15" fill="#fff" stroke="#c0392b" stroke-width="2.5" stroke-dasharray="4 3"/>
-      <text x="210" y="205" text-anchor="middle" font-size="15" fill="#c0392b" font-weight="700">+</text>
-      <!-- quasiparticle B on the loop -->
-      <circle cx="296" cy="200" r="9" fill="#1565c0"/>
-      <text x="296" y="178" text-anchor="middle" font-size="13" fill="#1565c0">qp</text>
-      <!-- legend -->
-      <g font-size="16" fill="#222">
-        <circle cx="476" cy="96" r="4" fill="#1a2330"/><text x="492" y="101">electron</text>
-        <circle cx="476" cy="140" r="11" fill="#fff" stroke="#c0392b" stroke-width="2.5" stroke-dasharray="4 3"/>
-        <text x="496" y="145">quasihole&#160;&#160;(e* = e/3)</text>
-        <path d="M462 184 a14 10 0 1 1 0.1 0" fill="none" stroke="#1565c0" stroke-width="2.5" stroke-dasharray="6 4"/>
-        <text x="496" y="189">braid = encircle = 2 exchanges</text>
-      </g>
-      <text x="468" y="240" font-size="22" fill="#1565c0" font-weight="700">→ statistical phase 2π/3</text>
-    </svg>` },
-    steps:[
-      'Laughlin state $\\;\\Psi_m=\\prod_{i&lt;j}(z_i-z_j)^m\\,e^{-\\sum_k|z_k|^2/4\\ell_B^2}\\;$ (m = 3)',
-      'Quasihole at $\\eta:\\;\\prod_i (z_i-\\eta)\\,\\Psi_m\\;\\Rightarrow\\;$ fractional charge $e^*=e/3$',
-      'Braiding two quasiholes $\\;\\Rightarrow\\;$ statistical phase $2\\pi/3$',
-    ] },
-
+  // interferometer + conductance formula
   { type:'content', section:'Recall',
     title:'Quantum Hall Interferometer — Weak Backscattering',
-    fig:{ kind:'iframe', src:V+'device/b1-device-edge.html?embed=fig', w:760, h:540 },
+    fig:{ kind:'iframe', src:V+'device/b1-device-edge.html?embed=fig&light=1&N=0', w:760, h:540 },
     steps:[
-      'Chiral edge channels carry the current along the boundary',
-      'Two QPCs weakly backscatter ($R\\ll 1$), defining two paths',
-      'The two backscattered paths interfere $\\;\\to\\;$ conductance oscillates',
+      'Two QPCs backscatter the edge with amplitudes $r_1, r_2$',
+      'Backscattered probability current $\\;\\propto |r_1+r_2 e^{i\\theta}|^2 = r_1^2+r_2^2+2r_1r_2\\cos\\theta$',
+      'Conductance $\\;G=G_0(1-R)\\;\\Rightarrow\\;\\delta G\\propto\\cos\\theta$',
     ] },
 
   // ---- Part 2 : Device Design ---------------------------------------------
-  { type:'divider', section:'Device Design', kicker:'Part 2 · ~1 min', title:'Device Design' },
+  { type:'divider', section:'Device Design', kicker:'Part 2', title:'Device Design' },
 
+  // two phase sources on the real device (with quasihole); formula follows from above
   { type:'content', section:'Device Design',
-    title:'Two Backscattering Paths: Phase Difference',
-    fig:{ kind:'iframe', src:V+'prototypes/p-derivation-twopath.html?embed=fig&row=1', w:934, h:440 },
+    title:'Two Backscattering Paths: the Phase θ',
+    fig:{ kind:'iframe', src:V+'device/b1-device-edge.html?embed=fig&light=1&N=2', w:760, h:540 },
     steps:[
-      'Amplitudes $r_1$ (QPC1) and $r_2$ (QPC2)',
-      'Enclosed flux $\\to$ Aharonov–Bohm phase $\\;\\theta_{AB}=2\\pi\\frac{e^*}{e}\\frac{A_I B}{\\Phi_0}$',
-      'Enclosed anyons $\\to$ braiding phase $\\;N_{\\mathrm{qp}}\\,\\theta_{\\mathrm{anyon}}$',
-      'Total $\\;\\theta=\\theta_{AB}+N_{\\mathrm{qp}}\\,\\theta_{\\mathrm{anyon}}$',
-    ] },
-
-  { type:'content', section:'Device Design',
-    title:'From Interference to Conductance',
-    fig:{ kind:'iframe', src:V+'prototypes/p-derivation-phasor.html?embed=fig&row=1', w:834, h:360 },
-    steps:[
-      '$r=r_1+r_2\\,e^{i\\theta}$',
-      '$R=|r|^2=r_1^2+r_2^2+2r_1r_2\\cos\\theta$',
-      '$G=G_0(1-R)\\;\\Rightarrow\\;\\delta G\\propto\\cos\\theta$',
-      '$N_{\\mathrm{qp}}\\to N_{\\mathrm{qp}}+1$ shifts the fringe — a phase slip',
+      'The phase difference $\\theta$ has two sources:',
+      'Aharonov–Bohm — enclosed flux: $\\;\\theta_{AB}=2\\pi\\frac{e^*}{e}\\frac{A_I B}{\\Phi_0}$',
+      'Anyonic — enclosed quasiparticles: $\\;N_{\\mathrm{qp}}\\,\\theta_{\\mathrm{anyon}}$',
+      '$\\theta=\\theta_{AB}+N_{\\mathrm{qp}}\\theta_{\\mathrm{anyon}}\\;\\Rightarrow\\;\\delta G\\propto\\cos\\theta$',
     ] },
 
   // ---- Part 3 : Interpretation of Results ---------------------------------
-  { type:'divider', section:'Results', kicker:'Part 3 · Interpretation of Results', title:'Interpretation of Results' },
+  { type:'divider', section:'Results', kicker:'Interpretation of Results', title:'Interpretation of Results' },
 
+  // merged: measurement slices (left) + theory slices (right)
   { type:'content', section:'Results · Phase slips',
-    title:'Discrete Phase Slips: Measurement vs. Simulation',
-    fig:{ kind:'iframe', src:V+'prototypes/p-compare-sidebyside.html?embed=fig', w:1000, h:430 },
-    steps:[
-      'Left: measured $\\delta G(B,\\delta V_g)$ (Fig 2). Right: thermal-average model',
-      'Same diagonal fringes, same discrete phase slips',
-    ] },
-
-  { type:'content', section:'Results · Phase slips',
-    title:'Slices & Oscillations',
-    fig:{ kind:'iframe', src:V+'prototypes/p-slice-measured.html?embed=fig', w:820, h:670 },
-    steps:[
-      'Horizontal cut: $\\delta G$ vs $B$ oscillates (AB period)',
-      'Vertical cut: $\\delta G$ vs $\\delta V_g$ oscillates',
-      'Periods set the enclosed area $A_I$ and $e^*/e$',
+    title:'Discrete Phase Slips — Measurement & Theory',
+    cols:[
+      { fig:{ kind:'iframe', src:V+'prototypes/p-slice-measured.html?embed=fig', w:820, h:670 },
+        body:'Measured $\\delta G(B,\\delta V_g)$ (Fig 2) + cuts' },
+      { fig:{ kind:'iframe', src:V+'prototypes/p-slice-crosshair.html?embed=fig', w:820, h:680 },
+        body:'Thermal-average model + cuts' },
     ] },
 
   { type:'content', section:'Results · Phase slips',
@@ -218,32 +235,26 @@ const DECK = [
       'Decisive control: the jumps are an anyon effect',
     ] },
 
+  // merged temperature slide: theory with a temperature slider (raise T -> dephasing)
   { type:'content', section:'Results · Temperature',
-    title:'Temperature Dependence: Dephasing',
-    fig:{ kind:'img', src:F+'fig4.png' },
+    title:'Temperature Dependence (theory): Dephasing',
+    fig:{ kind:'iframe', src:V+'simulation/d1-heatmap.html?embed', w:1180, h:640 },
     steps:[
-      '$\\delta G \\sim e^{-T/T_0}$ — coherence falls with $T$',
-      'Central ($\\nu$ fixed): edge thermal smearing (dwell time) $\\Rightarrow T_0\\approx 94$ mK ≈ prediction',
+      'Thermal average $\\;\\langle\\delta G\\rangle=\\tfrac1Z\\sum_N e^{-E(N)/kT}\\cos(\\theta_{AB}+N\\theta_{\\mathrm{anyon}})$',
+      'Raise the Temperature slider $\\to$ fringes wash out (dephasing); strongest off-center where $N_{\\mathrm{qp}}$ fluctuates',
     ] },
 
-  { type:'content', section:'Results · Temperature',
-    title:'Topological Dephasing',
-    fig:{ kind:'iframe', src:V+'measurements/c4-temperature.html?embed=fig', w:760, h:420 },
-    steps:[
-      'High/low field: many quasiparticles fill the bulk; $N_{\\mathrm{qp}}$ thermally fluctuates',
-      'Topological dephasing $\\Rightarrow T_0\\approx 31$–$32$ mK, far below the $\\sim\\!85$ mK predicted (~3×)',
-      'A non-local effect of anyonic statistics — no direct edge–bulk interaction',
-    ] },
-
-  // ---- Summary -------------------------------------------------------------
+  // ---- Summary : 6 static (no-interaction) snapshots -----------------------
   { type:'content', section:'Summary',
     title:'Summary',
-    fig:{ kind:'img', src:R+'measured_fig2.png' },
-    steps:[
-      'Anyonic braiding phase $\\;2\\pi/3\\;$ directly observed',
-      'Discrete phase slips in $\\delta G(B,\\delta V_g)$ — the smoking gun',
-      'Robust against the $\\nu=1$ control and temperature checks',
-    ] },
+    cols:[
+      { fig:{ kind:'img', src:F+'summary/braiding.png' },    body:'braiding → 2π/3' },
+      { fig:{ kind:'img', src:F+'summary/device.png' },       body:'FP interferometer' },
+      { fig:{ kind:'img', src:F+'summary/conductance.png' },  body:'δG ∝ cos θ' },
+      { fig:{ kind:'img', src:F+'summary/slices.png' },       body:'phase slips & cuts' },
+      { fig:{ kind:'img', src:F+'summary/compare.png' },      body:'measured vs model' },
+      { fig:{ kind:'img', src:F+'summary/temperature.png' },  body:'T₀ & dephasing' },
+    ], grid:true },
 
   // ---- Backup --------------------------------------------------------------
   { type:'divider', section:'Backup', kicker:'Auxiliary', title:'Backup' },
@@ -264,16 +275,24 @@ const DECK = [
 const stage = document.getElementById('stage');
 const N = DECK.length;
 
+const CUSTOM={}; let _uid=0;          // custom canvas figures: id -> init(canvas)->{stop}
 function figHTML(fig){
-  if(!fig) return '';
+  if(!fig) return '<span class="ph">(figure)</span>';
   if(fig.kind==='iframe') return `<iframe data-src="${fig.src}" data-w="${fig.w||900}" data-h="${fig.h||500}" scrolling="no"></iframe>`;
   if(fig.kind==='img')    return `<img src="${fig.src}" alt="">`;
   if(fig.kind==='svg')    return fig.html||'';
+  if(fig.kind==='custom'){ const id='cf'+(_uid++); CUSTOM[id]=fig.init;
+    return `<canvas class="customfig" id="${id}" width="${fig.w||600}" height="${fig.h||440}"></canvas>`; }
   return '';
 }
 function stepsHTML(steps){
   if(!steps||!steps.length) return '';
   return '<div class="steps">' + steps.map(s=>`<div class="step">${s}</div>`).join('') + '</div>';
+}
+function colsHTML(cols, grid){
+  return `<div class="cols${grid?' grid':''}">` + cols.map(c=>
+    `<div class="col"><div class="figwrap">${figHTML(c.fig)}</div>`
+    + (c.body?`<div class="colbody">${c.body}</div>`:'') + `</div>`).join('') + `</div>`;
 }
 function foot(i, section){
   return `<div class="foot"><span>${section||''}</span><span class="pn">${i+1} / ${N}</span></div>`;
@@ -284,17 +303,19 @@ DECK.forEach((s,i)=>{
   if(s.type==='cover'){
     el.className='slide cover';
     el.innerHTML=`<div class="eyebrow">${s.eyebrow||''}</div><h1>${s.title}</h1>`
-      +`<div class="cite">${s.cite||''}</div><div class="meta">${s.meta||''}</div>`;
+      +`<div class="cite">${s.cite||''}</div>`
+      +(s.figSvg?`<div class="coverfig">${s.figSvg}</div>`:'')
+      +`<div class="meta">${s.meta||''}</div>`;
   }else if(s.type==='divider'){
     el.className='slide divider';
     el.innerHTML=`<div class="kicker">${s.kicker||''}</div><h2>${s.title}</h2>`+foot(i,'');
   }else{
     el.className='slide content';
+    const bodyHTML = s.cols ? colsHTML(s.cols, s.grid)
+      : `<div class="figwrap">${figHTML(s.fig)}</div>`+stepsHTML(s.steps);
     el.innerHTML=`<h2 class="slide-title">${s.title}</h2>`
       +(s.sub?`<div class="slide-sub">${s.sub}</div>`:'')
-      +`<div class="figwrap">${figHTML(s.fig)||'<span class="ph">(figure)</span>'}</div>`
-      +stepsHTML(s.steps)
-      +foot(i,s.section);
+      +bodyHTML+foot(i,s.section);
   }
   stage.appendChild(el);
 });
@@ -310,76 +331,68 @@ if(window.renderMathInElement) renderMathInElement(stage,{
 });
 
 // ============================================================================
-// navigation (slide + step)
+// navigation (slide-to-slide; all text shown at once)
 // ============================================================================
 const slides=[...stage.children];
-const stepCount = DECK.map(s => (s.type==='content' && s.steps) ? s.steps.length : 0);
 const hud=document.getElementById('hud');
-let si=0, st=0;
+let si=0, _stops=[];
 
 function lazyload(i){
-  const fr = slides[i].querySelector('iframe[data-src]');
-  if(fr){ fr.src=fr.getAttribute('data-src'); fr.removeAttribute('data-src'); }
+  slides[i].querySelectorAll('iframe[data-src]').forEach(fr=>{
+    fr.src=fr.getAttribute('data-src'); fr.removeAttribute('data-src');
+  });
 }
 function scaleFig(el){
-  const fr = el.querySelector('.figwrap iframe'); if(!fr) return;
-  const box = fr.parentElement;
-  const W=+fr.dataset.w||900, H=+fr.dataset.h||500;
-  const k=Math.min(box.clientWidth/W, box.clientHeight/H);
-  fr.style.width=W+'px'; fr.style.height=H+'px';
-  fr.style.transform='translate(-50%,-50%) scale('+k+')';
+  el.querySelectorAll('.figwrap iframe').forEach(fr=>{
+    const box=fr.parentElement;
+    const W=+fr.dataset.w||900, H=+fr.dataset.h||500;
+    const k=Math.min(box.clientWidth/W, box.clientHeight/H);
+    fr.style.width=W+'px'; fr.style.height=H+'px';
+    fr.style.transform='translate(-50%,-50%) scale('+k+')';
+  });
 }
 function render(){
+  _stops.forEach(s=>{ try{ s&&s(); }catch(e){} }); _stops=[];   // stop prev animations
   slides.forEach((el,k)=>el.classList.toggle('on',k===si));
-  const steps=slides[si].querySelectorAll('.step');
-  steps.forEach((e,k)=>e.classList.toggle('show',k<st));
   lazyload(si);
   scaleFig(slides[si]);
-  const stepInfo = stepCount[si] ? `  ·  ${st}/${stepCount[si]}` : '';
-  hud.textContent = `slide ${si+1} / ${N}${stepInfo}`;
+  slides[si].querySelectorAll('canvas.customfig').forEach(cv=>{
+    const init=CUSTOM[cv.id]; if(init){ const r=init(cv); if(r&&r.stop) _stops.push(r.stop); }
+  });
+  hud.textContent = `slide ${si+1} / ${N}`;
   location.hash = '#'+(si+1);
 }
-function goSlide(n){ si=Math.max(0,Math.min(N-1,n)); st=0; render(); }
-function next(){
-  if(st<stepCount[si]) st++;
-  else if(si<N-1){ si++; st=0; }
-  render();
-}
-function prev(){
-  if(st>0) st--;
-  else if(si>0){ si--; st=stepCount[si]; }
-  render();
-}
+function go(n){ si=Math.max(0,Math.min(N-1,n)); render(); }
 function fit(){
   const s=Math.min(window.innerWidth/1280, window.innerHeight/720);
   stage.style.transform='scale('+s+')';
 }
 addEventListener('resize', fit);
 addEventListener('keydown', e=>{
-  if(e.key==='ArrowRight'||e.key==='PageDown'||e.key===' '){ next(); e.preventDefault(); }
-  else if(e.key==='ArrowLeft'||e.key==='PageUp'){ prev(); e.preventDefault(); }
-  else if(e.key==='Home'){ goSlide(0); }
-  else if(e.key==='End'){ goSlide(N-1); }
+  if(e.key==='ArrowRight'||e.key==='PageDown'||e.key===' '){ go(si+1); e.preventDefault(); }
+  else if(e.key==='ArrowLeft'||e.key==='PageUp'){ go(si-1); e.preventDefault(); }
+  else if(e.key==='Home'){ go(0); }
+  else if(e.key==='End'){ go(N-1); }
   else if(e.key==='f'||e.key==='F'){ if(!document.fullscreenElement) document.documentElement.requestFullscreen(); else document.exitFullscreen(); }
 });
-stage.addEventListener('click', e=>{ if(e.clientX < window.innerWidth*0.25) prev(); else next(); });
+stage.addEventListener('click', e=>{ if(e.clientX < window.innerWidth*0.25) go(si-1); else go(si+1); });
 
-// mouse-wheel / trackpad: one gesture = one step (jitter threshold + cooldown)
+// mouse-wheel / trackpad: one gesture = one slide (jitter threshold + 50 ms cooldown)
 let wheelLock=false;
 addEventListener('wheel', e=>{
   if(Math.abs(e.deltaY)<8) return;
   e.preventDefault();
   if(wheelLock) return;
   wheelLock=true;
-  (e.deltaY>0?next:prev)();
-  setTimeout(()=>{ wheelLock=false; }, 380);
+  go(si + (e.deltaY>0?1:-1));
+  setTimeout(()=>{ wheelLock=false; }, 50);
 }, { passive:false });
 
 // expose for headless layout testing
-window.__deck = { goSlide, next, prev, get si(){return si;}, get st(){return st;}, N };
+window.__deck = { go, get si(){return si;}, N };
 
 const startSlide = (parseInt((location.hash||'').replace('#',''))||1) - 1;
-fit(); goSlide(startSlide);
+fit(); go(startSlide);
 </script>
 </body>
 </html>

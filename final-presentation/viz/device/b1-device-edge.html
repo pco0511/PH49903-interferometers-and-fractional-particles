@@ -58,6 +58,14 @@
 const el=id=>document.getElementById(id);
 const cv=document.getElementById('cv'), ctx=cv.getContext('2d');
 let T=0.90, V=0, N=2, playing=true, phase=0;
+const LIGHT=document.documentElement.classList.contains('embed-light');
+const _p=new URLSearchParams(location.search);
+if(_p.has('N')) N=Math.max(0,Math.min(5,+_p.get('N')));
+if(_p.has('T')) T=parseFloat(_p.get('T'));
+const BG=LIGHT?'#ffffff':'#0b0d12', MESA=LIGHT?'#dce8fb':'#1e2a55', MESA_ST=LIGHT?'#9bb3cc':'#3a4a80',
+      INK=LIGHT?'#222':'#cbd3df', SUB=LIGHT?'#666':'#9aa3af',
+      FIELD=LIGHT?'#2b6fb0':'#7fd1ff', REFL=LIGHT?'#c8860a':'#ffd27d',
+      DEPF=LIGHT?'rgba(40,110,200,.12)':'rgba(120,200,255,.10)', DEPS=LIGHT?'rgba(40,110,200,.6)':'rgba(120,200,255,.5)';
 
 // ---- device geometry copied from svg/device_design.svg (raw coords) ----------
 const RX0=918, RY0=1289, RW=1412, RH=951;                  // mesa bounding box
@@ -101,9 +109,9 @@ function spiral(x,y,r){ ctx.strokeStyle='#ff5a5a'; ctx.lineWidth=2; ctx.beginPat
 
 function refl(cxr,cyr,strength){           // QPC backscatter (reflection) indicator, raw coords
   const x=sx(cxr), y=sy(cyr), r=16;
-  ctx.globalAlpha=Math.min(1,0.2+strength*2.6); ctx.strokeStyle='#ffd27d'; ctx.lineWidth=2.4;
+  ctx.globalAlpha=Math.min(1,0.2+strength*2.6); ctx.strokeStyle=REFL; ctx.lineWidth=2.4;
   ctx.beginPath(); ctx.arc(x,y,r,-2.2,2.0); ctx.stroke();
-  const a=2.0; ctx.fillStyle='#ffd27d';
+  const a=2.0; ctx.fillStyle=REFL;
   ctx.beginPath(); ctx.moveTo(x+r*Math.cos(a),y+r*Math.sin(a));
   ctx.lineTo(x+r*Math.cos(a)-9*Math.cos(a-1.2),y+r*Math.sin(a)-9*Math.sin(a-1.2));
   ctx.lineTo(x+r*Math.cos(a)-9*Math.cos(a+0.2),y+r*Math.sin(a)-9*Math.sin(a+0.2)); ctx.closePath(); ctx.fill();
@@ -112,17 +120,17 @@ function refl(cxr,cyr,strength){           // QPC backscatter (reflection) indic
 
 // out-of-plane field symbol (circle + centre dot). fieldDot: raw coords; fieldDot2: screen coords.
 function fieldDot(rx,ry,r,al){ const x=sx(rx),y=sy(ry); ctx.save(); ctx.globalAlpha=al;
-  ctx.strokeStyle='#7fd1ff'; ctx.fillStyle='#7fd1ff'; ctx.lineWidth=1.4;
+  ctx.strokeStyle=FIELD; ctx.fillStyle=FIELD; ctx.lineWidth=1.4;
   ctx.beginPath(); ctx.arc(x,y,r,0,2*Math.PI); ctx.stroke(); ctx.beginPath(); ctx.arc(x,y,r*0.22,0,2*Math.PI); ctx.fill(); ctx.restore(); }
-function fieldDot2(x,y,r){ ctx.strokeStyle='#7fd1ff'; ctx.fillStyle='#7fd1ff'; ctx.lineWidth=1.6;
+function fieldDot2(x,y,r){ ctx.strokeStyle=FIELD; ctx.fillStyle=FIELD; ctx.lineWidth=1.6;
   ctx.beginPath(); ctx.arc(x,y,r,0,2*Math.PI); ctx.stroke(); ctx.beginPath(); ctx.arc(x,y,r*0.22,0,2*Math.PI); ctx.fill(); }
 
 function draw(){
   layout();
-  const W=cv.width,H=cv.height; ctx.fillStyle='#0b0d12'; ctx.fillRect(0,0,W,H);
+  const W=cv.width,H=cv.height; ctx.fillStyle=BG; ctx.fillRect(0,0,W,H);
   // mesa (2DES)
-  ctx.fillStyle='#1e2a55'; ctx.fillRect(sx(RX0),sy(RY0),RW*SC,RH*SC);
-  ctx.strokeStyle='#3a4a80'; ctx.lineWidth=1; ctx.strokeRect(sx(RX0),sy(RY0),RW*SC,RH*SC);
+  ctx.fillStyle=MESA; ctx.fillRect(sx(RX0),sy(RY0),RW*SC,RH*SC);
+  ctx.strokeStyle=MESA_ST; ctx.lineWidth=1; ctx.strokeRect(sx(RX0),sy(RY0),RW*SC,RH*SC);
 
   // metal gates (yellow)
   for(const g of GATES){ fillP(g,'#c9c08a'); strokeP(g,'#8d855a',1); }
@@ -130,8 +138,8 @@ function draw(){
   // depletion inset (effective edge) + enclosed area, shrinks with -V (exaggerated)
   const dep=-V;                               // raw px inset (V in [-30,0] -> 0..30)
   const il=CL+dep, ir=CR-dep, it=CT+dep, ib=CB-dep;
-  ctx.fillStyle='rgba(120,200,255,.10)'; ctx.fillRect(sx(il),sy(it),(ir-il)*SC,(ib-it)*SC);
-  ctx.strokeStyle='rgba(120,200,255,.5)'; ctx.setLineDash([5,4]); ctx.lineWidth=1.2;
+  ctx.fillStyle=DEPF; ctx.fillRect(sx(il),sy(it),(ir-il)*SC,(ib-it)*SC);
+  ctx.strokeStyle=DEPS; ctx.setLineDash([5,4]); ctx.lineWidth=1.2;
   ctx.strokeRect(sx(il),sy(it),(ir-il)*SC,(ib-it)*SC); ctx.setLineDash([]);
 
   // inner / return edges (always present, faint, slow flow)
@@ -154,7 +162,7 @@ function draw(){
   for(const c of [[1010,1380],[2235,1380],[1010,2120],[2235,2120]]) fieldDot(c[0],c[1],8,0.5);
 
   // source (AC); the bottom-left contact is the grounded return (no "drain" label)
-  ctx.strokeStyle='#cbd3df'; ctx.lineWidth=1.6;
+  ctx.strokeStyle=INK; ctx.lineWidth=1.6;
   const sxs=44, sys=sy(1305); ctx.beginPath(); ctx.arc(sxs,sys,13,0,2*Math.PI); ctx.stroke();
   ctx.beginPath(); ctx.moveTo(sxs-7,sys); ctx.bezierCurveTo(sxs-3,sys-7,sxs+3,sys+7,sxs+7,sys); ctx.stroke();
   ctx.beginPath(); ctx.moveTo(sxs+13,sys); ctx.lineTo(sx(925),sys); ctx.stroke();
@@ -163,21 +171,21 @@ function draw(){
   ctx.beginPath(); ctx.moveTo(dxs,dys);ctx.lineTo(dxs,dys+4); ctx.stroke();
 
   // labels
-  ctx.fillStyle='#cbd3df'; ctx.font='12px sans-serif'; ctx.textAlign='center';
+  ctx.fillStyle=INK; ctx.font='12px sans-serif'; ctx.textAlign='center';
   ctx.fillText('QPC 1', sx(1215), sy(1640)); ctx.fillText('QPC 2', sx(2044), sy(1640));
   ctx.textAlign='left'; ctx.fillText('I_source', 26, sys-20);
-  ctx.fillStyle='#9aa3af'; ctx.textAlign='center'; ctx.fillText('interferometer chamber (2DES)', sx((CL+CR)/2), sy(CB)+16);
+  ctx.fillStyle=SUB; ctx.textAlign='center'; ctx.fillText('interferometer chamber (2DES)', sx((CL+CR)/2), sy(CB)+16);
   // legend
   ctx.textAlign='left'; ctx.font='11px sans-serif';
-  ctx.fillStyle='#c9c08a'; ctx.fillRect(sx(RX0),20,12,12); ctx.fillStyle='#9aa3af'; ctx.fillText('metal gate', sx(RX0)+16,30);
-  ctx.fillStyle='#1e2a55'; ctx.fillRect(sx(RX0)+100,20,12,12); ctx.strokeStyle='#3a4a80'; ctx.strokeRect(sx(RX0)+100,20,12,12); ctx.fillStyle='#9aa3af'; ctx.fillText('2DES', sx(RX0)+116,30);
-  ctx.strokeStyle='#ff5a5a'; ctx.lineWidth=2.4; ctx.beginPath(); ctx.moveTo(sx(RX0)+170,26); ctx.lineTo(sx(RX0)+195,26); ctx.stroke(); ctx.fillStyle='#9aa3af'; ctx.fillText('chiral edge', sx(RX0)+200,30);
-  ctx.fillStyle='#ffd27d'; ctx.fillText('⤿ backscatter', sx(RX0)+285,30);
+  ctx.fillStyle='#c9c08a'; ctx.fillRect(sx(RX0),20,12,12); ctx.fillStyle=SUB; ctx.fillText('metal gate', sx(RX0)+16,30);
+  ctx.fillStyle=MESA; ctx.fillRect(sx(RX0)+100,20,12,12); ctx.strokeStyle=MESA_ST; ctx.strokeRect(sx(RX0)+100,20,12,12); ctx.fillStyle=SUB; ctx.fillText('2DES', sx(RX0)+116,30);
+  ctx.strokeStyle='#ff5a5a'; ctx.lineWidth=2.4; ctx.beginPath(); ctx.moveTo(sx(RX0)+170,26); ctx.lineTo(sx(RX0)+195,26); ctx.stroke(); ctx.fillStyle=SUB; ctx.fillText('chiral edge', sx(RX0)+200,30);
+  ctx.fillStyle=REFL; ctx.fillText('⤿ backscatter', sx(RX0)+285,30);
   // magnetic-field key (top-right)
   const bX=cv.width-184;
   fieldDot2(bX,26,8); fieldDot2(bX+22,26,8);
-  ctx.fillStyle='#7fd1ff'; ctx.font='bold 13px sans-serif'; ctx.textAlign='left'; ctx.fillText('B', bX+40,30);
-  ctx.fillStyle='#9aa3af'; ctx.font='10px sans-serif'; ctx.fillText('⊥ 2DES · out of page (≈8.65 T)', bX-6,46);
+  ctx.fillStyle=FIELD; ctx.font='bold 13px sans-serif'; ctx.textAlign='left'; ctx.fillText('B', bX+40,30);
+  ctx.fillStyle=SUB; ctx.font='10px sans-serif'; ctx.fillText('⊥ 2DES · out of page (≈8.65 T)', bX-6,46);
 
   // readouts (A_I tracks the visual inset; nominal 0.38 um^2 at V=0)
   const af=((ir-il)*(ib-it))/((CR-CL)*(CB-CT));

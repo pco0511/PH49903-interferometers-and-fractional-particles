@@ -12,5 +12,6 @@
     root.classList.add("embed");
     if (p.get("embed") === "fig") root.classList.add("embed-fig");
     if (p.has("row")) root.classList.add("embed-row");   // lay .plots canvases side-by-side
+    if (p.has("light")) root.classList.add("embed-light"); // white-background light theme
   } catch (e) { /* no-op */ }
 })();

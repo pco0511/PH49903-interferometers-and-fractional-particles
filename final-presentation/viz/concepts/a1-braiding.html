@@ -17,7 +17,7 @@
   <div class="plots">
     <div class="card">
       <h2>세계선 braid (2D를 3D처럼 · 앞/뒤 가림 = depth)</h2>
-      <canvas id="cv" width="820" height="480"></canvas>
+      <canvas id="cv" width="1000" height="480"></canvas>
     </div>
   </div>
   <div class="controls">
@@ -67,7 +67,13 @@
 "use strict";
 const cv=document.getElementById('cv'), ctx=cv.getContext('2d');
 const el=id=>document.getElementById(id), PI=Math.PI, TWO=2*PI;
-const RED='#E93725', YEL='#F8BA17', BG='#000';
+const LIGHT=document.documentElement.classList.contains('embed-light');
+const RED='#E93725', YEL=LIGHT?'#D99400':'#F8BA17', BG=LIGHT?'#ffffff':'#000';
+const INK=LIGHT?'#222':'#cbd3df', SUB=LIGHT?'#666':'#9aa3af',
+      LINE=LIGHT?'#d6dae0':'#2a2f39', AXIS=LIGHT?'#888':'#6b7280',
+      REF=LIGHT?'#c0392b':'#E93725', ACC=LIGHT?'#1565c0':'#4ea1ff',
+      PLANE0=LIGHT?'rgba(90,120,190,.10)':'rgba(120,140,200,.06)',
+      PLANET=LIGHT?'rgba(21,101,192,.12)':'rgba(78,161,255,.10)';
 let denom=3, N=1, speed=1.0, playing=true, tc=0;        // tc in [0,1): braid progress (time sweep)
 const R=0.6;                                            // in-plane orbit radius
 
@@ -94,7 +100,7 @@ function plane(P,t,fill){
   ctx.beginPath(); ctx.moveTo(c[0][0],c[0][1]);
   for(let i=1;i<4;i++)ctx.lineTo(c[i][0],c[i][1]); ctx.closePath();
   if(fill){ ctx.fillStyle=fill; ctx.fill(); }
-  ctx.strokeStyle='#2a2f39'; ctx.lineWidth=1; ctx.stroke();
+  ctx.strokeStyle=LINE; ctx.lineWidth=1; ctx.stroke();
 }
 // one continuous smooth stroke through a list of points (no per-segment beading)
 function smooth(pts,col,w){
@@ -108,14 +114,14 @@ function smooth(pts,col,w){
 
 function drawPanel(P,mode,title){
   // time axis (t) on the left
-  ctx.strokeStyle='#6b7280'; ctx.fillStyle='#6b7280'; ctx.lineWidth=1.5;
+  ctx.strokeStyle=AXIS; ctx.fillStyle=AXIS; ctx.lineWidth=1.5;
   const ax=P.left+30, ay0=P.baseY+6, ay1=P.baseY-P.th-P.dy-6;
   ctx.beginPath(); ctx.moveTo(ax,ay0); ctx.lineTo(ax,ay1); ctx.stroke();
   ctx.beginPath(); ctx.moveTo(ax,ay1); ctx.lineTo(ax-5,ay1+11); ctx.lineTo(ax+5,ay1+11); ctx.closePath(); ctx.fill();
-  ctx.font='italic 15px serif'; ctx.fillStyle='#cbd3df'; ctx.textAlign='center'; ctx.fillText('t', ax-12, ay1+6);
+  ctx.font='italic 15px serif'; ctx.fillStyle=INK; ctx.textAlign='center'; ctx.fillText('t', ax-12, ay1+6);
 
   // bottom & top time-slice planes
-  plane(P,0,'rgba(120,140,200,.06)');
+  plane(P,0,PLANE0);
 
   // worldlines (full 0..1): split each strand into arcs at depth-swap points (where the
   // two strands' depth order flips = a crossing). Each arc is ONE continuous smooth
@@ -143,7 +149,7 @@ function drawPanel(P,mode,title){
   plane(P,1,null);
 
   // sweeping "current time" plane + particles at tc
-  plane(P,tc,'rgba(78,161,255,.10)');
+  plane(P,tc,PLANET);
   const q=posAt(mode,tc);
   const rp=proj(P,q.red[0],q.red[1],tc), yp=proj(P,q.yel[0],q.yel[1],tc);
   const items=[{p:yp,z:q.yel[1],col:YEL,n:N},{p:rp,z:q.red[1],col:RED,n:1}];
@@ -155,30 +161,50 @@ function drawPanel(P,mode,title){
   }
 
   // title + crossing-count hint
-  ctx.fillStyle='#cbd3df'; ctx.font='13px sans-serif'; ctx.textAlign='center';
+  ctx.fillStyle=INK; ctx.font='13px sans-serif'; ctx.textAlign='center';
   ctx.fillText(title, P.cx, 36);
-  ctx.fillStyle='#9aa3af'; ctx.font='11px sans-serif';
+  ctx.fillStyle=SUB; ctx.font='11px sans-serif';
   ctx.fillText(mode==='dx'?'double exchange → 2 crossings':'one winding → 1 loop', P.cx, 54);
 }
 
 function fmtPhase(p){ const f=p/PI; if(Math.abs(f)<1e-6)return '0';
   return f.toFixed(2)+'π  ('+p.toFixed(2)+' rad)'; }
-function drawPhasor(cx,cy,r,phase){
-  ctx.strokeStyle='#444'; ctx.lineWidth=1; ctx.beginPath(); ctx.arc(cx,cy,r,0,TWO); ctx.stroke();
-  ctx.strokeStyle='#4ea1ff'; ctx.lineWidth=2.5; ctx.beginPath(); ctx.moveTo(cx,cy);
-  ctx.lineTo(cx+r*Math.cos(phase-PI/2), cy+r*Math.sin(phase-PI/2)); ctx.stroke();
-  ctx.fillStyle='#9aa3af'; ctx.font='10px sans-serif'; ctx.textAlign='right'; ctx.fillText('phasor', cx-r-6, cy+3);
+function fmtDeg(r){ return Math.round(r*180/PI)+'°'; }
+function phaseStr(){ const num=2*N; return denom===1 ? num+'π' : num+'π/'+denom; }
+function phasorAt(cx,cy,r,th,col){
+  ctx.strokeStyle=LIGHT?'#cfd4da':'#555'; ctx.lineWidth=1.3; ctx.beginPath(); ctx.arc(cx,cy,r,0,TWO); ctx.stroke();
+  ctx.strokeStyle=LIGHT?'#e8eaee':'#333'; ctx.lineWidth=1; ctx.beginPath(); ctx.moveTo(cx-r,cy); ctx.lineTo(cx+r,cy); ctx.stroke();
+  const ex=cx+r*Math.cos(th), ey=cy-r*Math.sin(th);
+  ctx.strokeStyle=col; ctx.lineWidth=3; ctx.beginPath(); ctx.moveTo(cx,cy); ctx.lineTo(ex,ey); ctx.stroke();
+  const a=Math.atan2(ey-cy,ex-cx),h=8; ctx.fillStyle=col; ctx.beginPath(); ctx.moveTo(ex,ey);
+  ctx.lineTo(ex-h*Math.cos(a-0.4),ey-h*Math.sin(a-0.4)); ctx.lineTo(ex-h*Math.cos(a+0.4),ey-h*Math.sin(a+0.4)); ctx.closePath(); ctx.fill();
+}
+// fixed phasors at t=0,1 + one sweeping along the current time-slice (right of panels)
+function drawPhasorColumn(){
+  const cx=905, yOf=t=>392-t*212, r=30, NA=N*thetaAnyon();
+  ctx.strokeStyle=LINE; ctx.setLineDash([4,4]); ctx.lineWidth=1;
+  ctx.beginPath(); ctx.moveTo(cx,yOf(0)+r+20); ctx.lineTo(cx,yOf(1)-r-20); ctx.stroke(); ctx.setLineDash([]);
+  ctx.strokeStyle=ACC; ctx.globalAlpha=.35; ctx.setLineDash([5,4]);
+  ctx.beginPath(); ctx.moveTo(722,yOf(tc)); ctx.lineTo(cx-r-2,yOf(tc)); ctx.stroke(); ctx.setLineDash([]); ctx.globalAlpha=1;
+  phasorAt(cx,yOf(0),r,0,REF);
+  phasorAt(cx,yOf(1),r,NA,REF);
+  phasorAt(cx,yOf(tc),r-3,NA*tc,ACC);
+  ctx.fillStyle=SUB; ctx.font='12px sans-serif'; ctx.textAlign='center';
+  ctx.fillText('t = 0 :  θ = 0', cx, yOf(0)+r+36);
+  ctx.fillText('t = 1 :  θ = '+phaseStr(), cx, yOf(1)-r-24);
+  ctx.fillStyle=ACC; ctx.font='bold 13px sans-serif'; ctx.textAlign='right';
+  ctx.fillText('θ = '+fmtDeg(NA*tc), cx-r-10, yOf(tc)+4);
 }
 
 const PL=makePanel(0), PR=makePanel(410);
 function draw(){
   ctx.fillStyle=BG; ctx.fillRect(0,0,cv.width,cv.height);
-  ctx.strokeStyle='#2a2f39'; ctx.beginPath(); ctx.moveTo(410,28); ctx.lineTo(410,452); ctx.stroke();
+  ctx.strokeStyle=LINE; ctx.beginPath(); ctx.moveTo(410,28); ctx.lineTo(410,452); ctx.stroke();
   drawPanel(PL,'dx','① double exchange');
   drawPanel(PR,'wd','② one winding (encircle)');
   // accumulated statistical phase (same for both paths)
   const acc=N*thetaAnyon()*tc;
-  drawPhasor(410,460,14,acc);
+  drawPhasorColumn();
   el('o_acc').textContent=fmtPhase(acc);
   el('note').textContent = denom===1
     ? 'ν=1: θ=2π → phase returns after one braid. No braiding (fermion).'

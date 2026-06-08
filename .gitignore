@@ -3,3 +3,10 @@
 # lecture-note PDFs (final-presentation/ref/lecture_notes/).
 final-presentation/ref/
 ref/
+
+# Build / tooling artifacts — not needed at runtime.
+# KaTeX is vendored separately in final-presentation/slides/vendor/katex/,
+# so node_modules (katex source + playwright-core) is dev-only.
+node_modules/
+__pycache__/
+*.pyc

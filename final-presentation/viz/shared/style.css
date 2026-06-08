@@ -82,6 +82,9 @@ html.embed-fig .wrap { padding:0; }
 /* ?row : place the .plots canvases side-by-side (good for tall 2-canvas viz) */
 html.embed-row .plots { display:flex; flex-direction:row; gap:14px; align-items:flex-start; flex-wrap:nowrap; }
 html.embed-row .plots .card { margin:0; }
+/* ?light : white background (the viz also paint a white canvas bg in JS) */
+html.embed-light body { background:#fff; }
+html.embed-light canvas { background:#fff !important; }
 
 /* gallery (index.html) */
 .gallery { max-width:1100px; margin:0 auto; padding:8px 20px 40px; }

@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>D1 · Supp. Fig 5 시뮬레이션 (열평균 컨덕턴스)</title>
 <link rel="stylesheet" href="../shared/style.css">
+<script src="../shared/embed.js"></script>
 </head>
 <body>
 <header>
@@ -15,20 +16,20 @@
 <div class="wrap">
   <div class="plots">
     <div class="card">
-      <h2>컨덕턴스 맵 δG(B, δV_g)<span class="tag" id="tt">kT/E_c</span></h2>
+      <h2>Conductance map δG(B, δV_g)<span class="tag" id="tt">kT/E_c</span></h2>
       <canvas id="map" width="760" height="340"></canvas>
     </div>
     <div class="card">
-      <h2>⟨N_qp⟩ vs B  (δV_g = 0 라인컷)</h2>
+      <h2>⟨N_qp⟩ vs B  (δV_g = 0 linecut)</h2>
       <canvas id="nqp" width="760" height="170"></canvas>
     </div>
   </div>
   <div class="controls">
     <div class="card">
-      <h2>비고정 파라미터</h2>
-      <div class="slider"><label>온도 kT/E_c <b id="v_r">0.020</b></label>
+      <h2>Parameters</h2>
+      <div class="slider"><label>Temperature kT/E_c <b id="v_r">0.020</b></label>
         <input id="s_r" type="range" min="-3.1" max="-0.7" step="0.01" value="-1.699">
-        <div class="sub">로그 · 패널 a/b/c = 0.002 / 0.02 / 0.1 · T≈<span id="v_T">39</span> mK</div></div>
+        <div class="sub">log · panels a/b/c = 0.002 / 0.02 / 0.1 · T≈<span id="v_T">39</span> mK</div></div>
       <div class="slider"><label>A₀ <b id="v_A0">0.098</b> μm²</label>
         <input id="s_A0" type="range" min="0.05" max="0.25" step="0.001" value="0.098"></div>
       <div class="slider"><label>∂A/∂V_g <b id="v_dad">0.120</b> μm²/V</label>
@@ -39,19 +40,19 @@
         <input id="s_Bc" type="range" min="8.40" max="8.90" step="0.005" value="8.653"></div>
       <div class="slider"><label>α_bulk <b id="v_ab">0.100</b> mV⁻¹</label>
         <input id="s_ab" type="range" min="0.0" max="0.16" step="0.002" value="0.100"></div>
-      <button id="reset">픽셀 적합값으로 리셋</button>
+      <button id="reset">Reset to pixel-fit</button>
     </div>
     <div class="card">
-      <h2>실시간 도출량</h2>
+      <h2>Live readout</h2>
       <div class="readout">
-        <div><span>AB 기울기</span><b id="o_slope">–</b></div>
-        <div><span>B-주기</span><b id="o_Bper">–</b></div>
-        <div><span>Vg-주기</span><b id="o_Vper">–</b></div>
-        <div><span>central 폭</span><b id="o_cen">–</b></div>
-        <div><span>transition 기울기</span><b id="o_ts">–</b></div>
+        <div><span>AB slope</span><b id="o_slope">–</b></div>
+        <div><span>B-period</span><b id="o_Bper">–</b></div>
+        <div><span>Vg-period</span><b id="o_Vper">–</b></div>
+        <div><span>central width</span><b id="o_cen">–</b></div>
+        <div><span>transition slope</span><b id="o_ts">–</b></div>
         <div><span>E_c</span><b id="o_Ec">–</b></div>
       </div>
-      <div class="sub" style="margin-top:8px">픽셀 측정: 기울기 −95 · B-주기 127 mT · Vg-주기 12.2 mV · central 447 mT · side Vg 9.7 mV</div>
+      <div class="sub" style="margin-top:8px">pixel fit: slope −95 · B-period 127 mT · Vg-period 12.2 mV · central 447 mT · side Vg 9.7 mV</div>
     </div>
   </div>
 </div>

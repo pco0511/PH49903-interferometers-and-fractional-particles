@@ -1,0 +1,66 @@
+name: Deploy slides to GitHub Pages
+
+# Builds and publishes the presentation (final-presentation/) to GitHub Pages.
+# Runs on every push to main; can also be triggered manually.
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+# Permissions required by the deploy-pages action.
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Only one Pages deploy at a time; let an in-progress run finish.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure Pages
+        uses: actions/configure-pages@v5
+        with:
+          # Turn Pages on automatically the first time (no manual settings click).
+          enablement: true
+
+      - name: Prepare site (presentation only)
+        run: |
+          # The deck is self-contained under final-presentation/
+          # (KaTeX is vendored in slides/vendor/katex/).
+          # .nojekyll: serve every file verbatim — no Jekyll processing,
+          # so vendor/, fonts/, and any _-prefixed paths are kept.
+          touch final-presentation/.nojekyll
+          # Site root redirects to the deck at /slides/.
+          cat > final-presentation/index.html <<'EOF'
+          <!doctype html>
+          <html lang="en">
+          <meta charset="utf-8">
+          <title>Direct observation of anyonic braiding statistics — slides</title>
+          <meta http-equiv="refresh" content="0; url=slides/">
+          <link rel="canonical" href="slides/">
+          <body style="font-family:-apple-system,Segoe UI,Roboto,sans-serif;padding:2rem">
+          Redirecting to <a href="slides/">the slides</a>…
+          </body>
+          </html>
+          EOF
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: final-presentation
+
+      - name: Deploy
+        id: deployment
+        uses: actions/deploy-pages@v4
