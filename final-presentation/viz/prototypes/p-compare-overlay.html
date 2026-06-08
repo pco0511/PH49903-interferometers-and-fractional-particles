@@ -39,6 +39,8 @@
         <input id="s_dad" type="range" min="0.04" max="0.30" step="0.001" value="0.194"></div>
       <div class="slider"><label>B_center <b id="v_Bc">8.870</b> T</label>
         <input id="s_Bc" type="range" min="8.5" max="9.2" step="0.002" value="8.870"></div>
+      <div class="slider"><label>Δ_qp/E_c <b id="v_dqe">1.07</b></label>
+        <input id="s_dqe" type="range" min="0.2" max="3.0" step="0.01" value="1.07"></div>
       <div class="slider"><label>온도 kT/E_c <b id="v_T">0.020</b></label>
         <input id="s_T" type="range" min="-3.1" max="-0.7" step="0.01" value="-1.699"></div>
       <button id="reset">프리셋으로 리셋</button>
@@ -62,11 +64,11 @@
 const el=id=>document.getElementById(id);
 const cv=el('cmp'), ctx=cv.getContext('2d');
 let SRC='fig2', MODE='wipe';
-const PRESET={fig2:{A0:0.259,dad:0.194,Bc:8.870},fig3b:{A0:0.259,dad:0.194,Bc:9.039}};
+const PRESET={fig2:{A0:0.259,dad:0.194,Bc:8.870,dqe:1.07},fig3b:{A0:0.259,dad:0.194,Bc:9.039,dqe:1.07}};
 const BOX={x:54,y:14,w:740,h:400};
 function curP(){
   return {A0:parseFloat(el('s_A0').value)*1e-12, dad:parseFloat(el('s_dad').value)*1e-12,
-          dqe:1.07, Bc:parseFloat(el('s_Bc').value), ab:0.100,
+          dqe:parseFloat(el('s_dqe').value), Bc:parseFloat(el('s_Bc').value), ab:0.100,
           ratio:Math.pow(10,parseFloat(el('s_T').value))};
 }
 function axes(c,box,ext,xstep,ystep){
@@ -87,7 +89,7 @@ function axes(c,box,ext,xstep,ystep){
 function render(){
   const m=window.MEASURED[SRC], ext=m.extent, P=curP();
   el('v_A0').textContent=(P.A0*1e12).toFixed(3); el('v_dad').textContent=(P.dad*1e12).toFixed(3);
-  el('v_Bc').textContent=P.Bc.toFixed(3); el('v_T').textContent=P.ratio.toFixed(3);
+  el('v_Bc').textContent=P.Bc.toFixed(3); el('v_dqe').textContent=P.dqe.toFixed(2); el('v_T').textContent=P.ratio.toFixed(3);
   el('v_w').textContent=el('s_w').value; el('v_a').textContent=el('s_a').value;
   const win={bmin:ext[0],bmax:ext[1],vtop:ext[3],vbot:ext[2]};
   // measured buffer
@@ -127,13 +129,13 @@ function render(){
     blend:'모델 불투명도를 올리며 측정 위에 겹친다.',
     diff:'모델−측정 차이(둘 다 ±1로 진폭 정규화 후). 0(가운데색)이 많을수록 형상·위상 일치. RMS는 절대 δG 오차가 아니라 형상 잔차.'}[MODE];
 }
-function applyPreset(){ const p=PRESET[SRC]; el('s_A0').value=p.A0; el('s_dad').value=p.dad; el('s_Bc').value=p.Bc; render(); }
+function applyPreset(){ const p=PRESET[SRC]; el('s_A0').value=p.A0; el('s_dad').value=p.dad; el('s_Bc').value=p.Bc; el('s_dqe').value=p.dqe; render(); }
 document.querySelectorAll('button[data-src]').forEach(b=>b.addEventListener('click',()=>{
   document.querySelectorAll('button[data-src]').forEach(x=>x.classList.remove('active')); b.classList.add('active'); SRC=b.dataset.src; applyPreset(); }));
 document.querySelectorAll('button[data-mode]').forEach(b=>b.addEventListener('click',()=>{
   document.querySelectorAll('button[data-mode]').forEach(x=>x.classList.remove('active')); b.classList.add('active'); MODE=b.dataset.mode;
   el('wrap_wipe').style.display=MODE==='wipe'?'':'none'; el('wrap_blend').style.display=MODE==='blend'?'':'none'; render(); }));
-for(const id of ['s_w','s_a','s_A0','s_dad','s_Bc','s_T']) el(id).addEventListener('input',render);
+for(const id of ['s_w','s_a','s_A0','s_dad','s_Bc','s_dqe','s_T']) el(id).addEventListener('input',render);
 el('reset').addEventListener('click',applyPreset);
 render();
 </script>

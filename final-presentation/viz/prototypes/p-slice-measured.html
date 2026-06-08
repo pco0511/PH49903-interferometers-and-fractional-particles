@@ -159,7 +159,7 @@ function slipVatB(B,e){ const ov=OV(),o=[]; if(!ov)return o; for(const s of ov.d
 
 function drawCut(ctx,box,cut,ext,xstep,xlabel,col,marker,sc,unit,marks){
   ctx.fillStyle=BG; ctx.fillRect(0,0,ctx.canvas.width,ctx.canvas.height);
-  let amax=0.02; for(const d of cut.y) amax=Math.max(amax,Math.abs(d));
+  const amax=1;   // fixed y-axis: normalized ±1 → ±4 ×10⁻² e²/h (sc=4)
   const X=v=>box.x+(v-ext[0])/(ext[1]-ext[0])*box.w, Y=d=>box.y+(amax-d)/(2*amax)*box.h;
   ctx.strokeStyle=ZERO; ctx.beginPath(); ctx.moveTo(box.x,Y(0)); ctx.lineTo(box.x+box.w,Y(0)); ctx.stroke();
   // phase-slip position markers (from fig2_overlay dashed lines)

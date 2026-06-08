@@ -63,11 +63,19 @@
   /* cover */
   .cover{ justify-content:center; padding:0 90px; }
   .cover .eyebrow{ font-size:16px; color:var(--sub); letter-spacing:.12em; text-transform:uppercase; }
-  .cover h1{ font-size:42px; font-weight:600; line-height:1.12; letter-spacing:-.015em; margin:18px 0 18px; max-width:1080px; }
+  .cover h1{ font-size:38px; font-weight:600; line-height:1.12; letter-spacing:-.015em; margin:14px 0 14px; max-width:1120px; }
   .cover .cite{ font-size:19px; color:#333; }
   .cover .coverfig{ margin:26px 0 6px; height:200px; display:flex; align-items:center; }
   .cover .coverfig svg{ height:200px; max-width:100%; }
-  .cover .meta{ font-size:16px; color:var(--sub); margin-top:14px; }
+  /* cover: row of the real figures reused later in the deck */
+  .cover .coverfigs{ display:flex; gap:26px; align-items:flex-start; justify-content:center; margin:22px 0 4px; }
+  .cover .covercell{ display:flex; flex-direction:column; align-items:center; }
+  .cover .figbox{ position:relative; display:flex; align-items:center; justify-content:center;
+    overflow:hidden; background:#fff; border:1px solid var(--hair); border-radius:6px; }
+  .cover .figbox iframe{ position:absolute; top:50%; left:50%; transform-origin:center center; border:0; background:transparent; }
+  .cover .figbox img{ height:100%; width:auto; max-width:100%; object-fit:contain; display:block; }
+  .cover .covercap{ font-size:13px; color:var(--sub); margin-top:9px; text-align:center; max-width:360px; }
+  .cover .meta{ font-size:15px; color:var(--sub); margin-top:14px; }
 
   /* divider */
   .divider{ justify-content:center; padding:0 96px; }
@@ -122,41 +130,18 @@ const LAUGHLIN_SVG = `<svg viewBox="0 0 720 380" xmlns="http://www.w3.org/2000/s
   <text x="468" y="240" font-size="22" fill="#1565c0" font-weight="700">→ statistical phase 2π/3</text>
 </svg>`;
 
-// cover figure: braid  ≡  Fabry–Perot interferometer
-const COVER_SVG = `<svg viewBox="0 0 980 210" xmlns="http://www.w3.org/2000/svg" font-family="Helvetica Neue,Arial,sans-serif">
-  <!-- braid: two strands, double exchange -->
-  <path d="M40 55 C 110 55 110 150 180 150 C 250 150 250 55 320 55" fill="none" stroke="#1565c0" stroke-width="7"/>
-  <path d="M40 150 C 110 150 110 55 180 55 C 250 55 250 150 320 150" fill="none" stroke="#fff" stroke-width="13"/>
-  <path d="M40 150 C 110 150 110 55 180 55 C 250 55 250 150 320 150" fill="none" stroke="#e8852b" stroke-width="7"/>
-  <text x="180" y="195" text-anchor="middle" font-size="16" fill="#333">anyonic braiding → 2π/3</text>
-  <!-- equivalence -->
-  <text x="400" y="108" text-anchor="middle" font-size="34" fill="#999">≡</text>
-  <!-- interferometer -->
-  <g stroke="#2b4a6f" fill="none" stroke-width="3">
-    <rect x="560" y="58" width="300" height="92" rx="10" fill="#eaf2fb"/>
-    <!-- QPC constrictions (gates pinching the edge) at left & right -->
-    <rect x="545" y="24" width="30" height="40" rx="5" fill="#d9c98a" stroke="#9c8b4a"/>
-    <rect x="545" y="146" width="30" height="40" rx="5" fill="#d9c98a" stroke="#9c8b4a"/>
-    <rect x="845" y="24" width="30" height="40" rx="5" fill="#d9c98a" stroke="#9c8b4a"/>
-    <rect x="845" y="146" width="30" height="40" rx="5" fill="#d9c98a" stroke="#9c8b4a"/>
-  </g>
-  <!-- edge current path -->
-  <path d="M470 104 L548 104 M872 104 L950 104" stroke="#c0392b" stroke-width="3" fill="none"/>
-  <path d="M548 104 l-12 -5 0 10 z" fill="#c0392b"/>
-  <path d="M950 104 l-12 -5 0 10 z" fill="#c0392b"/>
-  <circle cx="690" cy="104" r="7" fill="none" stroke="#c0392b" stroke-width="2.5"/>
-  <circle cx="730" cy="104" r="7" fill="none" stroke="#c0392b" stroke-width="2.5"/>
-  <text x="710" y="200" text-anchor="middle" font-size="16" fill="#333">Fabry–Pérot interferometer</text>
-  <text x="572" y="48" font-size="12" fill="#777">QPC₁</text><text x="872" y="48" font-size="12" fill="#777">QPC₂</text>
-</svg>`;
-
 const DECK = [
   { type:'cover',
     eyebrow:'PH49903 · Interferometers and Fractional Particles',
     title:'Direct Observation of Anyonic Braiding Statistics at the ν = 1/3 Fractional Quantum Hall State',
     cite:'Nakamura, Liang, Gardner & Manfra · Nature Physics 16, 931 (2020) · arXiv:2006.14115',
-    figSvg: COVER_SVG,
-    meta:'[Presenter] · 2026' },
+    // the actual figures reused later in the deck: braiding (slide 3), interferometer (4/6), Fig 2 (main result)
+    coverFigs:[
+      { fig:{ kind:'iframe', src:V+'concepts/a1-braiding.html?embed=fig&light=1', w:1000, h:480 }, cap:'anyonic braiding → 2π/3' },
+      { fig:{ kind:'iframe', src:V+'device/b1-device-edge.html?embed=fig&light=1&N=0', w:940, h:540 }, cap:'Fabry–Pérot interferometer' },
+      { fig:{ kind:'img', src:F+'fig2.png' }, cap:'main result — measured δG(B, δV_g)' },
+    ],
+    meta:'Chanwoo Park · 2026' },
 
   // ---- Part 1 : Recall -----------------------------------------------------
   { type:'divider', section:'Recall', kicker:'Part 1', title:'Recall' },
@@ -205,7 +190,7 @@ const DECK = [
     cols:[
       { fig:{ kind:'iframe', src:V+'prototypes/p-slice-measured.html?embed=fig&light=1', w:820, h:670 },
         body:'Measured $\\delta G(B,\\delta V_g)$ (Fig 2) + cuts' },
-      { fig:{ kind:'iframe', src:V+'prototypes/p-slice-crosshair.html?embed=fig&light=1', w:820, h:680 },
+      { fig:{ kind:'iframe', src:V+'prototypes/p-slice-crosshair.html?embed=fig&light=1', w:820, h:670 },
         body:'Thermal-average model + cuts' },
     ] },
 
@@ -294,6 +279,16 @@ function colsHTML(cols, grid){
     `<div class="col"><div class="figwrap">${figHTML(c.fig)}</div>`
     + (c.body?`<div class="colbody">${c.body}</div>`:'') + `</div>`).join('') + `</div>`;
 }
+// cover: a row of real figures (iframes scaled like .figwrap; img sizes itself). H drives box width.
+const COVH=192;
+function coverFigsHTML(figs){
+  return `<div class="coverfigs">` + figs.map(c=>{
+    const box = c.fig.kind==='iframe'
+      ? `<div class="figbox" style="width:${Math.round(COVH*c.fig.w/c.fig.h)}px;height:${COVH}px">${figHTML(c.fig)}</div>`
+      : `<div class="figbox" style="height:${COVH}px">${figHTML(c.fig)}</div>`;
+    return `<div class="covercell">${box}` + (c.cap?`<div class="covercap">${c.cap}</div>`:'') + `</div>`;
+  }).join('') + `</div>`;
+}
 function foot(i, section){
   return `<div class="foot"><span>${section||''}</span><span class="pn">${i+1} / ${N}</span></div>`;
 }
@@ -304,7 +299,7 @@ DECK.forEach((s,i)=>{
     el.className='slide cover';
     el.innerHTML=`<div class="eyebrow">${s.eyebrow||''}</div><h1>${s.title}</h1>`
       +`<div class="cite">${s.cite||''}</div>`
-      +(s.figSvg?`<div class="coverfig">${s.figSvg}</div>`:'')
+      +(s.coverFigs?coverFigsHTML(s.coverFigs):(s.figSvg?`<div class="coverfig">${s.figSvg}</div>`:''))
       +`<div class="meta">${s.meta||''}</div>`;
   }else if(s.type==='divider'){
     el.className='slide divider';
@@ -343,7 +338,7 @@ function lazyload(i){
   });
 }
 function scaleFig(el){
-  el.querySelectorAll('.figwrap iframe').forEach(fr=>{
+  el.querySelectorAll('.figwrap iframe, .coverfigs iframe').forEach(fr=>{
     const box=fr.parentElement;
     const W=+fr.dataset.w||900, H=+fr.dataset.h||500;
     const k=Math.min(box.clientWidth/W, box.clientHeight/H);

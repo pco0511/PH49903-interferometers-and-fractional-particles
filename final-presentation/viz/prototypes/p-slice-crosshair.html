@@ -35,10 +35,10 @@
   <div class="controls">
     <div class="card">
       <h2>십자선 위치</h2>
-      <div class="slider"><label>B <b id="v_B">8.65</b> T</label>
-        <input id="s_B" type="range" min="8.2" max="9.1" step="0.002" value="8.653"></div>
-      <div class="slider"><label>δV_g <b id="v_V">-15</b> mV</label>
-        <input id="s_V" type="range" min="-30" max="0" step="0.1" value="-15"></div>
+      <div class="slider"><label>B <b id="v_B">8.87</b> T</label>
+        <input id="s_B" type="range" min="8.71" max="9.03" step="0.001" value="8.87"></div>
+      <div class="slider"><label>δV_g <b id="v_V">-17.5</b> mV</label>
+        <input id="s_V" type="range" min="-31.9" max="-3.1" step="0.1" value="-17.5"></div>
       <div class="slider"><label>온도 kT/E_c <b id="v_T">0.020</b></label>
         <input id="s_T" type="range" min="-3.1" max="-0.7" step="0.01" value="-1.699"></div>
       <label style="display:block;margin-top:8px"><input id="c_slope" type="checkbox" checked> 기울기 주석 표시</label>
@@ -75,13 +75,17 @@ const map=el('map'), mc=map.getContext('2d');
 const cutH=el('cutH'), hc=cutH.getContext('2d');
 const cutV=el('cutV'), vc=cutV.getContext('2d');
 const NB=320, NV=200;
-const WIN={bmin:8.2,bmax:9.1,vtop:0,vbot:-30};
+// plot window only is matched to the measured fig2 extent (data/measured.js): B [8.71,9.03] T,
+// δV_g [-31.9,-3.1] mV. The model/P0 stays the Supp-Fig-5 pixel fit — we just view it here.
+const EXT={bmin:8.71,bmax:9.03,vtop:-3.1,vbot:-31.9};
+const BSPAN=EXT.bmax-EXT.bmin, VSPAN=EXT.vtop-EXT.vbot;
+const WIN={bmin:EXT.bmin,bmax:EXT.bmax,vtop:EXT.vtop,vbot:EXT.vbot};
 const P0={A0:0.098e-12,dad:0.120e-12,dqe:1.07,Bc:8.653,ab:0.100,ratio:0.02};
 const hm=VZ.makeHeatmap(NB,NV);
 const BOX={x:54,y:14,w:670,h:316};                 // heatmap plot box (shared X with cutH)
 const BOXH={x:54,y:14,w:670,h:116};
 const BOXV={x:54,y:14,w:670,h:116};
-let Bsel=8.653, Vsel=-15, cacheR=null, cacheG=null;
+let Bsel=(EXT.bmin+EXT.bmax)/2, Vsel=(EXT.vtop+EXT.vbot)/2, cacheR=null, cacheG=null;
 
 function P(){ return Object.assign({},P0,{ratio:Math.pow(10,parseFloat(el('s_T').value))}); }
 
@@ -107,7 +111,7 @@ function drawMap(){
   VZ.paintHeatmap(hm,g.dG,g.vmax,'div');
   mc.fillStyle=BG; mc.fillRect(0,0,map.width,map.height);
   mc.imageSmoothingEnabled=true; mc.drawImage(hm.buf,BOX.x,BOX.y,BOX.w,BOX.h);
-  const m=VZ.frame(mc,BOX,{xr:[8.2,9.1],yr:[-30,0],xstep:0.1,ystep:5,xlabel:'B (T)',ylabel:'δV_g (mV)'});
+  const m=VZ.frame(mc,BOX,{xr:[EXT.bmin,EXT.bmax],yr:[EXT.vbot,EXT.vtop],xstep:0.1,ystep:5,xlabel:'B (T)',ylabel:'δV_g (mV)',xfmt:v=>v.toFixed(2),yfmt:v=>v.toFixed(0)});
   VZ.colorbar(mc,BOX.x+BOX.w+18,BOX.y,14,BOX.h,(-g.vmax).toFixed(2),g.vmax.toFixed(2),'δG');
   // slope annotation lines through crosshair
   if(el('c_slope').checked){
@@ -127,33 +131,33 @@ function drawSlopeLine(m,slope,col){
   // Vg = Vsel + slope*(B - Bsel), drawn across the box, clipped
   mc.save(); mc.beginPath(); mc.rect(BOX.x,BOX.y,BOX.w,BOX.h); mc.clip();
   mc.strokeStyle=col; mc.lineWidth=2; mc.globalAlpha=0.9;
-  const b0=8.2,b1=9.1; const v0=Vsel+slope*(b0-Bsel), v1=Vsel+slope*(b1-Bsel);
+  const b0=EXT.bmin,b1=EXT.bmax; const v0=Vsel+slope*(b0-Bsel), v1=Vsel+slope*(b1-Bsel);
   mc.beginPath(); mc.moveTo(m.X(b0),m.Y(v0)); mc.lineTo(m.X(b1),m.Y(v1)); mc.stroke();
   mc.restore();
 }
 function drawCutH(){
   const L=lineVsB(Vsel,P(),320);
   hc.fillStyle=BG; hc.fillRect(0,0,cutH.width,cutH.height);
-  let amax=0.01; for(const d of L.dG) amax=Math.max(amax,Math.abs(d));
-  const X=b=>BOXH.x+(b-8.2)/0.9*BOXH.w, Y=d=>BOXH.y+(amax-d)/(2*amax)*BOXH.h;
+  const amax=1;   // fixed y-axis ±1
+  const X=b=>BOXH.x+(b-EXT.bmin)/BSPAN*BOXH.w, Y=d=>BOXH.y+(amax-d)/(2*amax)*BOXH.h;
   hc.strokeStyle=ZERO; hc.beginPath(); hc.moveTo(BOXH.x,Y(0)); hc.lineTo(BOXH.x+BOXH.w,Y(0)); hc.stroke();
   hc.strokeStyle=ABCOL; hc.lineWidth=1.8; hc.beginPath();
   for(let i=0;i<L.B.length;i++){ const x=X(L.B[i]),y=Y(L.dG[i]); i?hc.lineTo(x,y):hc.moveTo(x,y);} hc.stroke();
   // crosshair B marker
   hc.strokeStyle=CROSS; hc.setLineDash([4,3]); hc.beginPath(); hc.moveTo(X(Bsel),BOXH.y); hc.lineTo(X(Bsel),BOXH.y+BOXH.h); hc.stroke(); hc.setLineDash([]);
-  VZ.frame(hc,BOXH,{xr:[8.2,9.1],yr:[-amax,amax],xstep:0.1,ystep:amax,xlabel:'B (T)',ylabel:'δG',yfmt:v=>v.toFixed(2)});
+  VZ.frame(hc,BOXH,{xr:[EXT.bmin,EXT.bmax],yr:[-amax,amax],xstep:0.1,ystep:amax,xlabel:'B (T)',ylabel:'δG',xfmt:v=>v.toFixed(2),yfmt:v=>v.toFixed(2)});
   el('o_bp').textContent=(()=>{const p=period(L.B,L.dG,0.05*amax);return p?(p*1e3).toFixed(0)+' mT':'—';})();
 }
 function drawCutV(){
-  const L=FQH.lineVsVg(Bsel,P(),300,{vtop:0,vbot:-30});
+  const L=FQH.lineVsVg(Bsel,P(),300,{vtop:EXT.vtop,vbot:EXT.vbot});
   vc.fillStyle=BG; vc.fillRect(0,0,cutV.width,cutV.height);
-  let amax=0.01; for(const d of L.dG) amax=Math.max(amax,Math.abs(d));
-  const X=v=>BOXV.x+(v-(-30))/30*BOXV.w, Y=d=>BOXV.y+(amax-d)/(2*amax)*BOXV.h;
+  const amax=1;   // fixed y-axis ±1
+  const X=v=>BOXV.x+(v-EXT.vbot)/VSPAN*BOXV.w, Y=d=>BOXV.y+(amax-d)/(2*amax)*BOXV.h;
   vc.strokeStyle=ZERO; vc.beginPath(); vc.moveTo(BOXV.x,Y(0)); vc.lineTo(BOXV.x+BOXV.w,Y(0)); vc.stroke();
   vc.strokeStyle=JUMPCOL; vc.lineWidth=1.8; vc.beginPath();
   for(let i=0;i<L.Vg.length;i++){ const x=X(L.Vg[i]),y=Y(L.dG[i]); i?vc.lineTo(x,y):vc.moveTo(x,y);} vc.stroke();
   vc.strokeStyle=CROSS; vc.setLineDash([4,3]); vc.beginPath(); vc.moveTo(X(Vsel),BOXV.y); vc.lineTo(X(Vsel),BOXV.y+BOXV.h); vc.stroke(); vc.setLineDash([]);
-  VZ.frame(vc,BOXV,{xr:[-30,0],yr:[-amax,amax],xstep:5,ystep:amax,xlabel:'δV_g (mV)',ylabel:'δG',yfmt:v=>v.toFixed(2)});
+  VZ.frame(vc,BOXV,{xr:[EXT.vbot,EXT.vtop],yr:[-amax,amax],xstep:5,ystep:amax,xlabel:'δV_g (mV)',ylabel:'δG',xfmt:v=>v.toFixed(0),yfmt:v=>v.toFixed(2)});
   el('o_vp').textContent=(()=>{const p=period(L.Vg,L.dG,0.05*amax);return p?p.toFixed(1)+' mV':'—';})();
 }
 function render(){
@@ -173,8 +177,8 @@ function schedule(){ if(pending) return; pending=true; requestAnimationFrame(()=
 function pick(ev){
   const r=map.getBoundingClientRect();
   const px=(ev.clientX-r.left)*map.width/r.width, py=(ev.clientY-r.top)*map.height/r.height;
-  let b=8.2+(px-BOX.x)/BOX.w*0.9; let v=0-(py-BOX.y)/BOX.h*30;
-  b=Math.max(8.2,Math.min(9.1,b)); v=Math.max(-30,Math.min(0,v));
+  let b=EXT.bmin+(px-BOX.x)/BOX.w*BSPAN; let v=EXT.vtop-(py-BOX.y)/BOX.h*VSPAN;
+  b=Math.max(EXT.bmin,Math.min(EXT.bmax,b)); v=Math.max(EXT.vbot,Math.min(EXT.vtop,v));
   el('s_B').value=b; el('s_V').value=v; schedule();
 }
 let dragging=false;

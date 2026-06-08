@@ -53,14 +53,15 @@ var VZ = (function () {
     const Y = v => g.y + (ax.yr[1] - v) / (ax.yr[1] - ax.yr[0]) * g.h;
     if (ax.xstep) {
       ctx.textAlign = "center"; ctx.textBaseline = "top";
-      for (let v = ax.xr[0]; v <= ax.xr[1] + 1e-9; v += ax.xstep) {
+      // start at the first step-multiple inside the range (round ticks; matches p-slice-measured)
+      for (let v = Math.ceil(ax.xr[0] / ax.xstep) * ax.xstep; v <= ax.xr[1] + 1e-9; v += ax.xstep) {
         const x = X(v); ctx.beginPath(); ctx.moveTo(x, g.y + g.h); ctx.lineTo(x, g.y + g.h + 4); ctx.stroke();
         ctx.fillText(xfmt(v), x, g.y + g.h + 6);
       }
     }
     if (ax.ystep) {
       ctx.textAlign = "right"; ctx.textBaseline = "middle";
-      for (let v = ax.yr[0]; v <= ax.yr[1] + 1e-9; v += ax.ystep) {
+      for (let v = Math.ceil(ax.yr[0] / ax.ystep) * ax.ystep; v <= ax.yr[1] + 1e-9; v += ax.ystep) {
         const y = Y(v); ctx.beginPath(); ctx.moveTo(g.x - 4, y); ctx.lineTo(g.x, y); ctx.stroke();
         ctx.fillText(yfmt(v), g.x - 6, y);
       }

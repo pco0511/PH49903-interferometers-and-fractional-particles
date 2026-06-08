@@ -106,7 +106,7 @@ function drawDOS(B,ratio,mu){
   dctx.fillStyle=GOLD; dctx.font='11px sans-serif'; dctx.textAlign='center'; dctx.fillText('μ',X(mu),g.y-2);
   // peak labels
   dctx.fillStyle=SUB; dctx.fillText('hole-like',X(-DELTA/2),g.y+g.h+16); dctx.fillText('particle-like',X(DELTA/2),g.y+g.h+16);
-  VZ.frame(dctx,g,{xr:[Emin,Emax],yr:[0,1.05],xstep:0.5,xlabel:'Energy',ylabel:'DOS'});
+  VZ.frame(dctx,g,{xr:[Emin,Emax],yr:[0,1.05],xstep:1,xlabel:'Energy',ylabel:'DOS'});  // ticks -1/0/1 clear the ±0.5 peak labels
 }
 function drawNq(B,ratio){
   const W=nq.width,H=nq.height; nctx.fillStyle=BG; nctx.fillRect(0,0,W,H);
