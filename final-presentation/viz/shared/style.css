@@ -75,6 +75,7 @@ html.embed-fig .wrap { justify-content:center; }
 html.embed-fig .card { background:transparent; border:none; padding:0; margin:0; }
 html.embed-fig .card h2,
 html.embed-fig .sub,
+html.embed-fig .toggle,
 html.embed-fig .fixed { display:none !important; }
 /* tight figure: no body margins so the deck can measure/scale the content */
 html.embed-fig body { display:inline-block; }
@@ -85,6 +86,20 @@ html.embed-row .plots .card { margin:0; }
 /* ?light : white background (the viz also paint a white canvas bg in JS) */
 html.embed-light body { background:#fff; }
 html.embed-light canvas { background:#fff !important; }
+/* ?light controls chrome: re-point the dark theme tokens to light so any
+   visible control panel (e.g. d1 ?embed) reads on a white slide. Scoped to
+   embed-light, so the dark gallery is untouched. */
+html.embed-light {
+  --bg:#ffffff; --panel:#ffffff; --panel2:#ffffff; --ink:#1a1d22;
+  --mut:#5a6270; --acc:#1565c0; --line:#dce0e6; --line2:#c6ccd4;
+  --good:#2e9e4f; --warn:#c98a00;
+}
+html.embed-light .card p { color:#3a4049; }
+html.embed-light .fixed code { color:#1a1d22; }
+html.embed-light .eq { color:#2a2f36; }
+html.embed-light button { background:#eef1f5; color:#1a1d22; }
+html.embed-light button.active { background:#d9e6f5; }
+html.embed-light .tag { background:#e2efe6; color:#2e7d46; }
 
 /* gallery (index.html) */
 .gallery { max-width:1100px; margin:0 auto; padding:8px 20px 40px; }

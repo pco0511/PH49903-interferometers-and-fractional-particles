@@ -56,6 +56,15 @@
 
 <script>
 "use strict";
+// light-theme palette (embed-light set by shared/embed.js when ?light). Dark gallery unchanged.
+const LIGHT=document.documentElement.classList.contains('embed-light');
+const BG=LIGHT?'#ffffff':'#0b0d12';
+const SUB=LIGHT?'#5a6270':'#9aa3af';      // off-bar thin-layer labels
+const GOLD=LIGHT?'#c98a00':'#ffd27d';     // primary well highlight + setback bracket
+const WELLG=LIGHT?'#2e9e4f':'#8f8';       // screening well highlight
+const HOVER=LIGHT?'#1565c0':'#4ea1ff';    // hover outline
+const DOPEC=LIGHT?'#9aa3af':'#dddddd';    // Si δ-doping bar fill (very light gray → mid on white)
+const DOPELN=LIGHT?'#555':'#fff';         // dashed donor centre line
 const el=id=>document.getElementById(id);
 const cv=document.getElementById('cv'), ctx=cv.getContext('2d');
 // top -> bottom
@@ -85,26 +94,26 @@ function ys(){
   for(const l of L){ const h=Math.sqrt(l.t)/tot*H; out.push({y,h,l}); y+=h; } return out;
 }
 function draw(){
-  ctx.fillStyle='#0b0d12'; ctx.fillRect(0,0,cv.width,cv.height);
+  ctx.fillStyle=BG; ctx.fillRect(0,0,cv.width,cv.height);
   const rows=ys();
   rows.forEach((r,i)=>{
-    ctx.fillStyle=r.l.c; ctx.globalAlpha=(i===hot)?1:0.9; ctx.fillRect(X0,r.y,BARW,r.h-1); ctx.globalAlpha=1;
-    if(r.l.dope){ ctx.strokeStyle='#fff'; ctx.setLineDash([6,5]); ctx.lineWidth=1.5;
+    ctx.fillStyle=r.l.dope?DOPEC:r.l.c; ctx.globalAlpha=(i===hot)?1:0.9; ctx.fillRect(X0,r.y,BARW,r.h-1); ctx.globalAlpha=1;
+    if(r.l.dope){ ctx.strokeStyle=DOPELN; ctx.setLineDash([6,5]); ctx.lineWidth=1.5;
       ctx.beginPath(); ctx.moveTo(X0,r.y+r.h/2); ctx.lineTo(X0+BARW,r.y+r.h/2); ctx.stroke(); ctx.setLineDash([]); }
-    if(r.l.well||r.l.prim){ ctx.strokeStyle=r.l.prim?'#ffd27d':'#8f8'; ctx.lineWidth=2.5; ctx.strokeRect(X0+1,r.y+1,BARW-2,r.h-3); }
-    if(i===hot){ ctx.strokeStyle='#4ea1ff'; ctx.lineWidth=2; ctx.strokeRect(X0,r.y,BARW,r.h-1); }
+    if(r.l.well||r.l.prim){ ctx.strokeStyle=r.l.prim?GOLD:WELLG; ctx.lineWidth=2.5; ctx.strokeRect(X0+1,r.y+1,BARW-2,r.h-3); }
+    if(i===hot){ ctx.strokeStyle=HOVER; ctx.lineWidth=2; ctx.strokeRect(X0,r.y,BARW,r.h-1); }
     // label
-    ctx.fillStyle=(r.h>11)?'#0b0d12':'#cbd3df'; ctx.font='11px sans-serif'; ctx.textAlign='left'; ctx.textBaseline='middle';
-    if(r.h>12){ ctx.fillStyle='#10131a'; ctx.fillText(r.l.n, X0+8, r.y+r.h/2); }
-    else { ctx.fillStyle='#9aa3af'; ctx.fillText(r.l.n, LABELX, r.y+r.h/2); }
-    if(r.l.prim||r.l.well){ ctx.fillStyle=r.l.prim?'#ffd27d':'#8f8'; ctx.textAlign='left'; ctx.fillText('★ '+r.l.role, LABELX, r.y+r.h/2); }
+    ctx.font='11px sans-serif'; ctx.textAlign='left'; ctx.textBaseline='middle';
+    if(r.h>12){ ctx.fillStyle='#10131a'; ctx.fillText(r.l.n, X0+8, r.y+r.h/2); }   // on-bar: near-black on the colored fill
+    else { ctx.fillStyle=SUB; ctx.fillText(r.l.n, LABELX, r.y+r.h/2); }
+    if(r.l.prim||r.l.well){ ctx.fillStyle=r.l.prim?GOLD:WELLG; ctx.textAlign='left'; ctx.fillText('★ '+r.l.role, LABELX, r.y+r.h/2); }
   });
   // setback bracket d between primary well and top screening well
   const sw=rows.find(r=>r.l.role==='Top Screening Well'), pw=rows.find(r=>r.l.prim);
   if(sw&&pw){ const yA=sw.y+sw.h/2, yB=pw.y+pw.h/2; const bx=X0-14;
-    ctx.strokeStyle='#ffd27d'; ctx.lineWidth=1.5; ctx.beginPath();
+    ctx.strokeStyle=GOLD; ctx.lineWidth=1.5; ctx.beginPath();
     ctx.moveTo(bx,yA); ctx.lineTo(bx,yB); ctx.moveTo(bx,yA);ctx.lineTo(bx+6,yA); ctx.moveTo(bx,yB);ctx.lineTo(bx+6,yB); ctx.stroke();
-    ctx.fillStyle='#ffd27d'; ctx.save(); ctx.translate(bx-4,(yA+yB)/2); ctx.rotate(-Math.PI/2); ctx.textAlign='center'; ctx.fillText('d (setback)',0,0); ctx.restore(); }
+    ctx.fillStyle=GOLD; ctx.save(); ctx.translate(bx-4,(yA+yB)/2); ctx.rotate(-Math.PI/2); ctx.textAlign='center'; ctx.fillText('d (setback)',0,0); ctx.restore(); }
 }
 cv.addEventListener('mousemove',e=>{
   const rect=cv.getBoundingClientRect(); const my=(e.clientY-rect.top)*(cv.height/rect.height);

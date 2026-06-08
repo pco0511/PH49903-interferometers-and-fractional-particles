@@ -175,7 +175,7 @@ const DECK = [
   // interferometer + conductance formula
   { type:'content', section:'Recall',
     title:'Quantum Hall Interferometer — Weak Backscattering',
-    fig:{ kind:'iframe', src:V+'device/b1-device-edge.html?embed=fig&light=1&N=0', w:760, h:540 },
+    fig:{ kind:'iframe', src:V+'device/b1-device-edge.html?embed=fig&light=1&N=0', w:940, h:540 },
     steps:[
       'Two QPCs backscatter the edge with amplitudes $r_1, r_2$',
       'Backscattered probability current $\\;\\propto |r_1+r_2 e^{i\\theta}|^2 = r_1^2+r_2^2+2r_1r_2\\cos\\theta$',
@@ -188,7 +188,7 @@ const DECK = [
   // two phase sources on the real device (with quasihole); formula follows from above
   { type:'content', section:'Device Design',
     title:'Two Backscattering Paths: the Phase θ',
-    fig:{ kind:'iframe', src:V+'device/b1-device-edge.html?embed=fig&light=1&N=2', w:760, h:540 },
+    fig:{ kind:'iframe', src:V+'device/b1-device-edge.html?embed=fig&light=1&N=2', w:940, h:540 },
     steps:[
       'The phase difference $\\theta$ has two sources:',
       'Aharonov–Bohm — enclosed flux: $\\;\\theta_{AB}=2\\pi\\frac{e^*}{e}\\frac{A_I B}{\\Phi_0}$',
@@ -203,15 +203,15 @@ const DECK = [
   { type:'content', section:'Results · Phase slips',
     title:'Discrete Phase Slips — Measurement & Theory',
     cols:[
-      { fig:{ kind:'iframe', src:V+'prototypes/p-slice-measured.html?embed=fig', w:820, h:670 },
+      { fig:{ kind:'iframe', src:V+'prototypes/p-slice-measured.html?embed=fig&light=1', w:820, h:670 },
         body:'Measured $\\delta G(B,\\delta V_g)$ (Fig 2) + cuts' },
-      { fig:{ kind:'iframe', src:V+'prototypes/p-slice-crosshair.html?embed=fig', w:820, h:680 },
+      { fig:{ kind:'iframe', src:V+'prototypes/p-slice-crosshair.html?embed=fig&light=1', w:820, h:680 },
         body:'Thermal-average model + cuts' },
     ] },
 
   { type:'content', section:'Results · Phase slips',
     title:'Phase Jumps = Anyonic Phase',
-    fig:{ kind:'iframe', src:V+'prototypes/p-slice-measured.html?embed=fig', w:820, h:670 },
+    fig:{ kind:'iframe', src:V+'prototypes/p-slice-measured.html?embed=fig&light=1', w:820, h:670 },
     steps:[
       'Across a positive-slope line, one quasiparticle is removed ($N_{\\mathrm{qp}}\\to N_{\\mathrm{qp}}-1$ as $B$ increases)',
       'The interference phase jumps by $\\;\\theta_{\\mathrm{anyon}}=2\\pi/3$',
@@ -220,7 +220,7 @@ const DECK = [
 
   { type:'content', section:'Results · Phase slips',
     title:'Meaning of the Slopes',
-    fig:{ kind:'iframe', src:V+'prototypes/p-slice-measured.html?embed=fig', w:820, h:670 },
+    fig:{ kind:'iframe', src:V+'prototypes/p-slice-measured.html?embed=fig&light=1', w:820, h:670 },
     steps:[
       'Iso-phase lines: $\\;$ negative slope $\\;\\to\\;$ continuous AB term',
       'Phase-jump cross-sections: $\\;$ positive slope $\\;\\to\\;$ discrete anyon term',
@@ -238,7 +238,7 @@ const DECK = [
   // merged temperature slide: theory with a temperature slider (raise T -> dephasing)
   { type:'content', section:'Results · Temperature',
     title:'Temperature Dependence (theory): Dephasing',
-    fig:{ kind:'iframe', src:V+'simulation/d1-heatmap.html?embed', w:1180, h:640 },
+    fig:{ kind:'iframe', src:V+'simulation/d1-heatmap.html?embed&light=1', w:1180, h:640 },
     steps:[
       'Thermal average $\\;\\langle\\delta G\\rangle=\\tfrac1Z\\sum_N e^{-E(N)/kT}\\cos(\\theta_{AB}+N\\theta_{\\mathrm{anyon}})$',
       'Raise the Temperature slider $\\to$ fringes wash out (dephasing); strongest off-center where $N_{\\mathrm{qp}}$ fluctuates',
@@ -261,11 +261,11 @@ const DECK = [
 
   { type:'content', section:'Backup',
     title:'Transition: Constant Filling → Constant Density',
-    fig:{ kind:'iframe', src:V+'concepts/a3-dos-regimes.html?embed=fig', w:760, h:440 } },
+    fig:{ kind:'iframe', src:V+'concepts/a3-dos-regimes.html?embed=fig&light=1', w:760, h:440 } },
 
   { type:'content', section:'Backup',
     title:'Experimental Details',
-    fig:{ kind:'iframe', src:V+'device/b2-layer-stack.html?embed=fig', w:520, h:560 },
+    fig:{ kind:'iframe', src:V+'device/b2-layer-stack.html?embed=fig&light=1', w:520, h:560 },
     steps:[ 'Screening-well heterostructure suppresses Coulomb-dominated charging' ] },
 ];
 

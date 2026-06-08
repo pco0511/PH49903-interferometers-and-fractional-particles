@@ -73,6 +73,15 @@
 <script src="../shared/render.js"></script>
 <script>
 "use strict";
+// light-theme palette (embed-light set by shared/embed.js when ?light is present).
+// Dark gallery values kept as the else-branch — "almost as-is", just recolored.
+const LIGHT=document.documentElement.classList.contains('embed-light');
+const BG=LIGHT?'#ffffff':'#0c0e12';
+const INK=LIGHT?'#222':'#cbd3df';
+const ZERO=LIGHT?'#d8dce2':'#333';
+const CROSS=LIGHT?'#111':'#fff';
+const ABCOL=LIGHT?'#1565c0':'#7fe0ff';     // negative-slope AB guide / horizontal cut
+const JUMPCOL=LIGHT?'#e8852b':'#ff9a52';   // positive-slope jump guide / vertical cut
 const el=id=>document.getElementById(id);
 const map=el('map'), mc=map.getContext('2d');
 const cutH=el('cutH'), hc=cutH.getContext('2d');
@@ -90,7 +99,7 @@ function axes(c,box,ext,xstep,ystep,xlabel,ylabel,yfmt){
   const x0=ext[0],x1=ext[1],y0=ext[2],y1=ext[3];
   const X=v=>box.x+(v-x0)/(x1-x0)*box.w, Y=v=>box.y+(y1-v)/(y1-y0)*box.h;
   c.strokeStyle='#888'; c.lineWidth=1; c.strokeRect(box.x,box.y,box.w,box.h);
-  c.fillStyle='#cbd3df'; c.font='11px sans-serif';
+  c.fillStyle=INK; c.font='11px sans-serif';
   c.textAlign='center'; c.textBaseline='top';
   for(let v=Math.ceil(x0/xstep)*xstep; v<=x1+1e-9; v+=xstep){ const x=X(v);
     c.beginPath(); c.moveTo(x,box.y+box.h); c.lineTo(x,box.y+box.h+4); c.stroke(); c.fillText((xstep<1?v.toFixed(2):v.toFixed(0)),x,box.y+box.h+6); }
@@ -113,7 +122,7 @@ function period(xs,ysRaw){ const ys=smooth(ysRaw); let amax=1e-6; for(const v of
   if(pk.length<2) return null; let s=0; for(let i=1;i<pk.length;i++) s+=Math.abs(pk[i]-pk[i-1]); return s/(pk.length-1); }
 
 function drawMap(){
-  const m=M(),e=m.extent; mc.fillStyle='#0c0e12'; mc.fillRect(0,0,map.width,map.height);
+  const m=M(),e=m.extent; mc.fillStyle=BG; mc.fillRect(0,0,map.width,map.height);
   mc.imageSmoothingEnabled=true; mc.drawImage(buf().buf,BOX.x,BOX.y,BOX.w,BOX.h);
   const span=e[1]-e[0], xstep=span>0.5?0.2:0.1;
   const t=axes(mc,BOX,e,xstep,5,'B (T)','δV_g (mV)');
@@ -121,12 +130,12 @@ function drawMap(){
   if(sc){ VZ.colorbar(mc,BOX.x+BOX.w+18,BOX.y,14,BOX.h,(-sc).toFixed(0),'+'+sc.toFixed(0),'δG ('+fmtUnit(m.unit)+')'); }
   else { VZ.colorbar(mc,BOX.x+BOX.w+18,BOX.y,14,BOX.h,'-1','+1','δG (정규화)'); }
   if(ovOn()) drawOverlay(t);
-  if(el('c_slope').checked){ slope(t,parseFloat(el('s_sa').value),'#7fe0ff'); slope(t,parseFloat(el('s_sb').value),'#ff9a52'); }
+  if(el('c_slope').checked){ slope(t,parseFloat(el('s_sa').value),ABCOL); slope(t,parseFloat(el('s_sb').value),JUMPCOL); }
   mc.save(); mc.beginPath(); mc.rect(BOX.x,BOX.y,BOX.w,BOX.h); mc.clip();
-  mc.strokeStyle='#fff'; mc.lineWidth=1.2; mc.setLineDash([4,3]);
+  mc.strokeStyle=CROSS; mc.lineWidth=1.2; mc.setLineDash([4,3]);
   mc.beginPath(); mc.moveTo(t.X(Bsel),BOX.y); mc.lineTo(t.X(Bsel),BOX.y+BOX.h);
   mc.moveTo(BOX.x,t.Y(Vsel)); mc.lineTo(BOX.x+BOX.w,t.Y(Vsel)); mc.stroke(); mc.setLineDash([]);
-  mc.fillStyle='#fff'; mc.beginPath(); mc.arc(t.X(Bsel),t.Y(Vsel),3.5,0,7); mc.fill(); mc.restore();
+  mc.fillStyle=CROSS; mc.beginPath(); mc.arc(t.X(Bsel),t.Y(Vsel),3.5,0,7); mc.fill(); mc.restore();
 }
 function slope(t,sl,col){ const e=M().extent; mc.save(); mc.beginPath(); mc.rect(BOX.x,BOX.y,BOX.w,BOX.h); mc.clip();
   mc.strokeStyle=col; mc.lineWidth=2; mc.globalAlpha=0.9;
@@ -135,7 +144,7 @@ function slope(t,sl,col){ const e=M().extent; mc.save(); mc.beginPath(); mc.rect
 // --- fig2_overlay.svg annotation lines (paper) in (B,dVg) data coords ---
 function OV(){ return window.OVERLAY && window.OVERLAY[SRC]; }
 function ovOn(){ return OV() && el('c_ov').checked; }
-const SLIPCOL='#ff2bd6';                                                 // phase-slip color (heatmap dashed + cut markers)
+const SLIPCOL=LIGHT?'#d11a9e':'#ff2bd6';                                 // phase-slip color (heatmap dashed + cut markers)
 function drawOverlay(t){ const ov=OV(); mc.save(); mc.beginPath(); mc.rect(BOX.x,BOX.y,BOX.w,BOX.h); mc.clip();
   mc.lineCap='round'; mc.strokeStyle='rgba(12,12,4,0.95)'; mc.lineWidth=4;   // AB fringe markers (solid)
   for(const s of ov.solid){ mc.beginPath(); mc.moveTo(t.X(s[0]),t.Y(s[1])); mc.lineTo(t.X(s[2]),t.Y(s[3])); mc.stroke(); }
@@ -149,16 +158,16 @@ function slipVatB(B,e){ const ov=OV(),o=[]; if(!ov)return o; for(const s of ov.d
   if((B-s[0])*(B-s[2])<=0){ const Vg=s[1]+(B-s[0])/(s[2]-s[0])*(s[3]-s[1]); if(Vg>=e[2]&&Vg<=e[3])o.push(Vg);} } return o; }
 
 function drawCut(ctx,box,cut,ext,xstep,xlabel,col,marker,sc,unit,marks){
-  ctx.fillStyle='#0c0e12'; ctx.fillRect(0,0,ctx.canvas.width,ctx.canvas.height);
+  ctx.fillStyle=BG; ctx.fillRect(0,0,ctx.canvas.width,ctx.canvas.height);
   let amax=0.02; for(const d of cut.y) amax=Math.max(amax,Math.abs(d));
   const X=v=>box.x+(v-ext[0])/(ext[1]-ext[0])*box.w, Y=d=>box.y+(amax-d)/(2*amax)*box.h;
-  ctx.strokeStyle='#333'; ctx.beginPath(); ctx.moveTo(box.x,Y(0)); ctx.lineTo(box.x+box.w,Y(0)); ctx.stroke();
+  ctx.strokeStyle=ZERO; ctx.beginPath(); ctx.moveTo(box.x,Y(0)); ctx.lineTo(box.x+box.w,Y(0)); ctx.stroke();
   // phase-slip position markers (from fig2_overlay dashed lines)
   if(marks) for(const mx of marks){ ctx.strokeStyle=SLIPCOL; ctx.lineWidth=2.6; ctx.setLineDash([]);
     ctx.beginPath(); ctx.moveTo(X(mx),box.y); ctx.lineTo(X(mx),box.y+box.h); ctx.stroke(); }
   ctx.strokeStyle=col; ctx.lineWidth=1.6; ctx.beginPath();
   for(let i=0;i<cut.x.length;i++){ const x=X(cut.x[i]),y=Y(cut.y[i]); i?ctx.lineTo(x,y):ctx.moveTo(x,y);} ctx.stroke();
-  ctx.strokeStyle='#fff'; ctx.setLineDash([4,3]); ctx.beginPath(); ctx.moveTo(X(marker),box.y); ctx.lineTo(X(marker),box.y+box.h); ctx.stroke(); ctx.setLineDash([]);
+  ctx.strokeStyle=CROSS; ctx.setLineDash([4,3]); ctx.beginPath(); ctx.moveTo(X(marker),box.y); ctx.lineTo(X(marker),box.y+box.h); ctx.stroke(); ctx.setLineDash([]);
   // y-axis in absolute units when a colormap scale is known (physical dG = norm * sc)
   const ylab = sc? 'δG ('+fmtUnit(unit)+')' : 'δG';
   axes(ctx,box,[ext[0],ext[1],-amax,amax],xstep,amax,xlabel,ylab, v=> sc? (v*sc).toFixed(1) : v.toFixed(2));
@@ -174,8 +183,8 @@ function render(){
   drawMap();
   const H=hcut(), V=vcut(), span=e[1]-e[0], sc=M().scale, unit=M().unit;
   const hMarks=ovOn()?slipBatV(Vsel,e):null, vMarks=ovOn()?slipVatB(Bsel,e):null;
-  drawCut(hc,BH,H,[e[0],e[1]],span>0.5?0.2:0.1,'B (T)','#7fe0ff',Bsel,sc,unit,hMarks);
-  drawCut(vc,BV,V,[e[2],e[3]],5,'δV_g (mV)','#ff9a52',Vsel,sc,unit,vMarks);
+  drawCut(hc,BH,H,[e[0],e[1]],span>0.5?0.2:0.1,'B (T)',ABCOL,Bsel,sc,unit,hMarks);
+  drawCut(vc,BV,V,[e[2],e[3]],5,'δV_g (mV)',JUMPCOL,Vsel,sc,unit,vMarks);
   const bp=period(H.x,H.y), vp=period(V.x,V.y);
   el('o_bp').textContent=bp?(bp*1e3).toFixed(0)+' mT':'—';
   el('o_vp').textContent=vp?vp.toFixed(1)+' mV':'—';

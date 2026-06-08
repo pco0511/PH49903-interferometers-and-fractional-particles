@@ -4,6 +4,12 @@
 "use strict";
 var VZ = (function () {
 
+  // light-theme detection (set by shared/embed.js when ?light is present).
+  // Only the axis/label text ink changes; the dark gallery is untouched.
+  var LIGHT = document.documentElement.classList.contains("embed-light");
+  var INK_COL = LIGHT ? "#333" : "#cbd3df";   // tick + label text
+  var AXIS_COL = "#888";                       // mid-gray frame/ticks read on both
+
   // matplotlib-style "jet" colormap, t in [0,1] -> writes RGBA at out[o..o+3]
   function jet(t, out, o) {
     if (t < 0) t = 0; else if (t > 1) t = 1;
@@ -38,7 +44,7 @@ var VZ = (function () {
   // g = {x,y,w,h}  ax = {xr:[lo,hi], yr:[lo,hi], xstep, ystep, xlabel, ylabel,
   //                      xfmt, yfmt, color}
   function frame(ctx, g, ax) {
-    const col = ax.color || "#888", ink = "#cbd3df";
+    const col = ax.color || AXIS_COL, ink = INK_COL;
     ctx.strokeStyle = col; ctx.lineWidth = 1; ctx.strokeRect(g.x, g.y, g.w, g.h);
     ctx.fillStyle = ink; ctx.font = "11px sans-serif";
     const xfmt = ax.xfmt || (v => v.toFixed(1));
@@ -67,8 +73,8 @@ var VZ = (function () {
   // vertical jet colorbar at (x,y,w,h) labelled lo..hi
   function colorbar(ctx, x, y, w, h, lo, hi, label) {
     for (let i = 0; i < h; i++) { const t = 1 - i / (h - 1); ctx.fillStyle = jetCss(t); ctx.fillRect(x, y + i, w, 1); }
-    ctx.strokeStyle = "#888"; ctx.strokeRect(x, y, w, h);
-    ctx.fillStyle = "#cbd3df"; ctx.font = "10px sans-serif"; ctx.textAlign = "left"; ctx.textBaseline = "middle";
+    ctx.strokeStyle = AXIS_COL; ctx.strokeRect(x, y, w, h);
+    ctx.fillStyle = INK_COL; ctx.font = "10px sans-serif"; ctx.textAlign = "left"; ctx.textBaseline = "middle";
     ctx.fillText(hi, x + w + 4, y + 4); ctx.fillText(lo, x + w + 4, y + h - 4);
     if (label) { ctx.save(); ctx.translate(x + w + 26, y + h / 2); ctx.rotate(-Math.PI / 2); ctx.textAlign = "center"; ctx.fillText(label, 0, 0); ctx.restore(); }
   }

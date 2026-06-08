@@ -83,7 +83,7 @@ function thetaAnyon(){ return TWO/denom; }
 // a 3D point (px,pz in-plane in [-1,1], t time in [0,1]) -> screen. Depth (pz)
 // shifts up-right (like the parallelogram time-slices in the reference svgs).
 function makePanel(left){
-  return { cx:left+182, baseY:392, th:212, rx:74, dx:40, dy:46, left:left };
+  return { cx:left+182, baseY:398, th:244, rx:88, dx:48, dy:54, left:left };
 }
 function proj(P,px,pz,t){
   return [ P.cx + px*P.rx + pz*P.dx, P.baseY - t*P.th - pz*P.dy ];
@@ -112,13 +112,16 @@ function smooth(pts,col,w){
   ctx.lineTo(pts[pts.length-1].x,pts[pts.length-1].y); ctx.stroke();
 }
 
-function drawPanel(P,mode,title){
-  // time axis (t) on the left
-  ctx.strokeStyle=AXIS; ctx.fillStyle=AXIS; ctx.lineWidth=1.5;
-  const ax=P.left+30, ay0=P.baseY+6, ay1=P.baseY-P.th-P.dy-6;
-  ctx.beginPath(); ctx.moveTo(ax,ay0); ctx.lineTo(ax,ay1); ctx.stroke();
-  ctx.beginPath(); ctx.moveTo(ax,ay1); ctx.lineTo(ax-5,ay1+11); ctx.lineTo(ax+5,ay1+11); ctx.closePath(); ctx.fill();
-  ctx.font='italic 15px serif'; ctx.fillStyle=INK; ctx.textAlign='center'; ctx.fillText('t', ax-12, ay1+6);
+function drawPanel(P,mode,title,axis){
+  // time axis (t) — drawn once (left panel only); bold black for emphasis
+  if(axis){
+    const TAX=LIGHT?'#000':AXIS;
+    ctx.strokeStyle=TAX; ctx.fillStyle=TAX; ctx.lineWidth=4;
+    const ax=P.left+30, ay0=P.baseY+6, ay1=P.baseY-P.th-P.dy-6;
+    ctx.beginPath(); ctx.moveTo(ax,ay0); ctx.lineTo(ax,ay1); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(ax,ay1); ctx.lineTo(ax-8,ay1+15); ctx.lineTo(ax+8,ay1+15); ctx.closePath(); ctx.fill();
+    ctx.font='italic bold 28px serif'; ctx.fillStyle=TAX; ctx.textAlign='center'; ctx.fillText('t', ax-18, ay1+12);
+  }
 
   // bottom & top time-slice planes
   plane(P,0,PLANE0);
@@ -160,11 +163,9 @@ function drawPanel(P,mode,title){
     ctx.strokeStyle='rgba(0,0,0,.5)'; ctx.lineWidth=1.5; ctx.stroke();
   }
 
-  // title + crossing-count hint
-  ctx.fillStyle=INK; ctx.font='13px sans-serif'; ctx.textAlign='center';
-  ctx.fillText(title, P.cx, 36);
-  ctx.fillStyle=SUB; ctx.font='11px sans-serif';
-  ctx.fillText(mode==='dx'?'double exchange → 2 crossings':'one winding → 1 loop', P.cx, 54);
+  // panel title — large, no sub-caption
+  ctx.fillStyle=INK; ctx.font='bold 30px sans-serif'; ctx.textAlign='center';
+  ctx.fillText(title, P.cx, 46);
 }
 
 function fmtPhase(p){ const f=p/PI; if(Math.abs(f)<1e-6)return '0';
@@ -181,11 +182,11 @@ function phasorAt(cx,cy,r,th,col){
 }
 // fixed phasors at t=0,1 + one sweeping along the current time-slice (right of panels)
 function drawPhasorColumn(){
-  const cx=905, yOf=t=>392-t*212, r=30, NA=N*thetaAnyon();
+  const cx=815, yOf=t=>398-t*244, r=30, NA=N*thetaAnyon();
   ctx.strokeStyle=LINE; ctx.setLineDash([4,4]); ctx.lineWidth=1;
   ctx.beginPath(); ctx.moveTo(cx,yOf(0)+r+20); ctx.lineTo(cx,yOf(1)-r-20); ctx.stroke(); ctx.setLineDash([]);
   ctx.strokeStyle=ACC; ctx.globalAlpha=.35; ctx.setLineDash([5,4]);
-  ctx.beginPath(); ctx.moveTo(722,yOf(tc)); ctx.lineTo(cx-r-2,yOf(tc)); ctx.stroke(); ctx.setLineDash([]); ctx.globalAlpha=1;
+  ctx.beginPath(); ctx.moveTo(PR.cx+140,yOf(tc)); ctx.lineTo(cx-r-2,yOf(tc)); ctx.stroke(); ctx.setLineDash([]); ctx.globalAlpha=1;
   phasorAt(cx,yOf(0),r,0,REF);
   phasorAt(cx,yOf(1),r,NA,REF);
   phasorAt(cx,yOf(tc),r-3,NA*tc,ACC);
@@ -196,12 +197,11 @@ function drawPhasorColumn(){
   ctx.fillText('θ = '+fmtDeg(NA*tc), cx-r-10, yOf(tc)+4);
 }
 
-const PL=makePanel(0), PR=makePanel(410);
+const PL=makePanel(90), PR=makePanel(380);
 function draw(){
   ctx.fillStyle=BG; ctx.fillRect(0,0,cv.width,cv.height);
-  ctx.strokeStyle=LINE; ctx.beginPath(); ctx.moveTo(410,28); ctx.lineTo(410,452); ctx.stroke();
-  drawPanel(PL,'dx','① double exchange');
-  drawPanel(PR,'wd','② one winding (encircle)');
+  drawPanel(PL,'dx','double exchange',true);
+  drawPanel(PR,'wd','winding',false);
   // accumulated statistical phase (same for both paths)
   const acc=N*thetaAnyon()*tc;
   drawPhasorColumn();

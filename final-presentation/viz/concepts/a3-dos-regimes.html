@@ -59,6 +59,16 @@
 <script src="../shared/render.js"></script>
 <script>
 "use strict";
+// light-theme palette (embed-light set by shared/embed.js when ?light). Dark gallery unchanged.
+const LIGHT=document.documentElement.classList.contains('embed-light');
+const BG=LIGHT?'#ffffff':'#0c0e12';
+const INK=LIGHT?'#222':'#cbd3df';
+const SUB=LIGHT?'#666':'#9aa3af';
+const ZERO=LIGHT?'#d8dce2':'#333';
+const ACC=LIGHT?'#1565c0':'#4ea1ff';
+const GOLD=LIGHT?'#c98a00':'#ffd27d';                              // μ line / current-B marker
+const OCC=LIGHT?'rgba(21,101,192,.14)':'rgba(78,161,255,.18)';     // occupied shading
+const FERMI=LIGHT?'rgba(30,140,55,.78)':'rgba(143,255,143,.6)';    // Fermi occupation curve
 const el=id=>document.getElementById(id);
 const dos=document.getElementById('dos'), dctx=dos.getContext('2d');
 const nq=document.getElementById('nq'), nctx=nq.getContext('2d');
@@ -74,42 +84,42 @@ function DOS(E){ return gauss(E,-DELTA/2,0.13)+gauss(E,+DELTA/2,0.13)+0.02; }
 function muOfN(n){ return (DELTA/2)*Math.tanh(n/2.5); }
 
 function drawDOS(B,ratio,mu){
-  const W=dos.width,H=dos.height; dctx.fillStyle='#000'; dctx.fillRect(0,0,W,H);
+  const W=dos.width,H=dos.height; dctx.fillStyle=BG; dctx.fillRect(0,0,W,H);
   const g={x:40,y:16,w:W-80,h:H-46};
   const Emin=-1.1,Emax=1.1;
   const X=E=>g.x+(E-Emin)/(Emax-Emin)*g.w, Y=v=>g.y+(1-v)*g.h;   // v in [0,1.05]
   const kT=ratio*0.5;   // map kT/E_c to E-units width (illustrative)
   // occupied shading: integrate DOS*f below
-  dctx.fillStyle='rgba(78,161,255,.18)';
+  dctx.fillStyle=OCC;
   dctx.beginPath(); dctx.moveTo(X(Emin),Y(0));
   for(let i=0;i<=300;i++){ const E=Emin+(Emax-Emin)*i/300; const f=1/(1+Math.exp((E-mu)/Math.max(kT,1e-3)));
     dctx.lineTo(X(E),Y(DOS(E)*f)); } dctx.lineTo(X(Emax),Y(0)); dctx.closePath(); dctx.fill();
   // DOS curve
-  dctx.strokeStyle='#cbd3df'; dctx.lineWidth=1.6; dctx.beginPath();
+  dctx.strokeStyle=INK; dctx.lineWidth=1.6; dctx.beginPath();
   for(let i=0;i<=300;i++){ const E=Emin+(Emax-Emin)*i/300; const x=X(E),y=Y(DOS(E)); if(i===0)dctx.moveTo(x,y); else dctx.lineTo(x,y);} dctx.stroke();
   // Fermi occupation (scaled)
-  dctx.strokeStyle='rgba(143,255,143,.6)'; dctx.lineWidth=1; dctx.beginPath();
+  dctx.strokeStyle=FERMI; dctx.lineWidth=1; dctx.beginPath();
   for(let i=0;i<=300;i++){ const E=Emin+(Emax-Emin)*i/300; const f=1/(1+Math.exp((E-mu)/Math.max(kT,1e-3))); const x=X(E),y=Y(f); if(i===0)dctx.moveTo(x,y); else dctx.lineTo(x,y);} dctx.stroke();
   // mu line
-  dctx.strokeStyle='#ffd27d'; dctx.lineWidth=1.5; dctx.setLineDash([5,3]);
+  dctx.strokeStyle=GOLD; dctx.lineWidth=1.5; dctx.setLineDash([5,3]);
   dctx.beginPath(); dctx.moveTo(X(mu),g.y); dctx.lineTo(X(mu),g.y+g.h); dctx.stroke(); dctx.setLineDash([]);
-  dctx.fillStyle='#ffd27d'; dctx.font='11px sans-serif'; dctx.textAlign='center'; dctx.fillText('μ',X(mu),g.y-2);
+  dctx.fillStyle=GOLD; dctx.font='11px sans-serif'; dctx.textAlign='center'; dctx.fillText('μ',X(mu),g.y-2);
   // peak labels
-  dctx.fillStyle='#9aa3af'; dctx.fillText('hole-like',X(-DELTA/2),g.y+g.h+16); dctx.fillText('particle-like',X(DELTA/2),g.y+g.h+16);
+  dctx.fillStyle=SUB; dctx.fillText('hole-like',X(-DELTA/2),g.y+g.h+16); dctx.fillText('particle-like',X(DELTA/2),g.y+g.h+16);
   VZ.frame(dctx,g,{xr:[Emin,Emax],yr:[0,1.05],xstep:0.5,xlabel:'Energy',ylabel:'DOS'});
 }
 function drawNq(B,ratio){
-  const W=nq.width,H=nq.height; nctx.fillStyle='#0c0e12'; nctx.fillRect(0,0,W,H);
+  const W=nq.width,H=nq.height; nctx.fillStyle=BG; nctx.fillRect(0,0,W,H);
   const g={x:50,y:12,w:W-70,h:H-40};
   const P=Object.assign({},P0,{ratio:ratio});
   let amax=1; const ys=[];
   for(let i=0;i<=240;i++){ const b=8.2+0.9*i/240; const n=FQH.point(b,0,FQH.norm(P)).N; ys.push(n); amax=Math.max(amax,Math.abs(n)); }
   amax=Math.ceil(amax);
   const X=b=>g.x+(b-8.2)/0.9*g.w, Y=n=>g.y+(amax-n)/(2*amax)*g.h;
-  nctx.strokeStyle='#333'; nctx.beginPath(); nctx.moveTo(g.x,Y(0)); nctx.lineTo(g.x+g.w,Y(0)); nctx.stroke();
-  nctx.strokeStyle='#4ea1ff'; nctx.lineWidth=1.8; nctx.beginPath();
+  nctx.strokeStyle=ZERO; nctx.beginPath(); nctx.moveTo(g.x,Y(0)); nctx.lineTo(g.x+g.w,Y(0)); nctx.stroke();
+  nctx.strokeStyle=ACC; nctx.lineWidth=1.8; nctx.beginPath();
   for(let i=0;i<ys.length;i++){ const b=8.2+0.9*i/240; const x=X(b),y=Y(ys[i]); if(i===0)nctx.moveTo(x,y); else nctx.lineTo(x,y);} nctx.stroke();
-  nctx.strokeStyle='#ffd27d'; nctx.setLineDash([4,3]); nctx.beginPath(); nctx.moveTo(X(B),g.y); nctx.lineTo(X(B),g.y+g.h); nctx.stroke(); nctx.setLineDash([]);
+  nctx.strokeStyle=GOLD; nctx.setLineDash([4,3]); nctx.beginPath(); nctx.moveTo(X(B),g.y); nctx.lineTo(X(B),g.y+g.h); nctx.stroke(); nctx.setLineDash([]);
   VZ.frame(nctx,g,{xr:[8.2,9.1],yr:[-amax,amax],xstep:0.1,ystep:amax,xlabel:'B (T)',ylabel:'⟨N_qp⟩'});
 }
 function render(){

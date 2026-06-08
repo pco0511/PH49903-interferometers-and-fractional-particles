@@ -66,6 +66,11 @@ const NB=300, NV=160;
 const map=document.getElementById('map'), mctx=map.getContext('2d');
 const nqp=document.getElementById('nqp'), nctx=nqp.getContext('2d');
 const hm=VZ.makeHeatmap(NB,NV);
+// light-theme palette (embed-light set by shared/embed.js when ?light). Dark gallery unchanged.
+const LIGHT=document.documentElement.classList.contains('embed-light');
+const BG=LIGHT?'#ffffff':'#0c0e12';
+const ZERO=LIGHT?'#d8dce2':'#333';
+const ACC=LIGHT?'#1565c0':'#4ea1ff';
 
 function params(){ return {
   ratio:Math.pow(10,parseFloat(el('s_r').value)), A0:parseFloat(el('s_A0').value)*1e-12,
@@ -75,7 +80,7 @@ function params(){ return {
 let last=null;
 function drawMap(g,p){
   VZ.paintHeatmap(hm,g.dG,g.vmax,'div');
-  const W=map.width,H=map.height; mctx.fillStyle='#000'; mctx.fillRect(0,0,W,H);
+  const W=map.width,H=map.height; mctx.fillStyle=BG; mctx.fillRect(0,0,W,H);
   const box={x:52,y:24,w:W-76,h:H-54};
   mctx.imageSmoothingEnabled=true; mctx.drawImage(hm.buf,box.x,box.y,box.w,box.h);
   const m=VZ.frame(mctx,box,{xr:[8.2,9.1],yr:[-30,0],xstep:0.1,ystep:5,xlabel:'B (T)',ylabel:'δV_g (mV)'});
@@ -90,12 +95,12 @@ function drawMap(g,p){
     mctx.fillText('Quasihole Φ₀', m.X((Bh+9.1)/2), box.y+12); }
 }
 function drawNqp(g){
-  const W=nqp.width,H=nqp.height; nctx.fillStyle='#0c0e12'; nctx.fillRect(0,0,W,H);
+  const W=nqp.width,H=nqp.height; nctx.fillStyle=BG; nctx.fillRect(0,0,W,H);
   const box={x:52,y:12,w:W-76,h:H-40};
   let amax=1; for(let i=0;i<NB;i++) amax=Math.max(amax,Math.abs(g.nqpTop[i])); amax=Math.ceil(amax);
   const X=b=>box.x+(b-8.2)/0.9*box.w, Y=n=>box.y+(amax-n)/(2*amax)*box.h;
-  nctx.strokeStyle='#333'; nctx.beginPath(); nctx.moveTo(box.x,Y(0)); nctx.lineTo(box.x+box.w,Y(0)); nctx.stroke();
-  nctx.strokeStyle='#4ea1ff'; nctx.lineWidth=1.8; nctx.beginPath();
+  nctx.strokeStyle=ZERO; nctx.beginPath(); nctx.moveTo(box.x,Y(0)); nctx.lineTo(box.x+box.w,Y(0)); nctx.stroke();
+  nctx.strokeStyle=ACC; nctx.lineWidth=1.8; nctx.beginPath();
   for(let i=0;i<NB;i++){ const b=8.2+0.9*i/(NB-1); const x=X(b),y=Y(g.nqpTop[i]); if(i===0)nctx.moveTo(x,y); else nctx.lineTo(x,y);} nctx.stroke();
   VZ.frame(nctx,box,{xr:[8.2,9.1],yr:[-amax,amax],xstep:0.1,ystep:amax,xlabel:'B (T)',ylabel:'⟨N_qp⟩',yfmt:v=>(v>0?'+':'')+v.toFixed(0)});
 }

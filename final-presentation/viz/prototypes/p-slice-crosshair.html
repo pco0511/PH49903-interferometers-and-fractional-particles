@@ -62,6 +62,14 @@
 <script src="../shared/render.js"></script>
 <script>
 "use strict";
+// light-theme palette (embed-light set by shared/embed.js when ?light is present).
+// Dark gallery values kept as the else-branch — "almost as-is", just recolored.
+const LIGHT=document.documentElement.classList.contains('embed-light');
+const BG=LIGHT?'#ffffff':'#0c0e12';
+const ZERO=LIGHT?'#d8dce2':'#333';
+const CROSS=LIGHT?'#111':'#fff';
+const ABCOL=LIGHT?'#1565c0':'#7fe0ff';     // negative AB iso-phase / horizontal cut
+const JUMPCOL=LIGHT?'#e8852b':'#ff9a52';   // positive jump cross-section / vertical cut
 const el=id=>document.getElementById(id);
 const map=el('map'), mc=map.getContext('2d');
 const cutH=el('cutH'), hc=cutH.getContext('2d');
@@ -97,22 +105,22 @@ function period(xs,ys,minamp){
 function drawMap(){
   const g=ensureGrid();
   VZ.paintHeatmap(hm,g.dG,g.vmax,'div');
-  mc.fillStyle='#0c0e12'; mc.fillRect(0,0,map.width,map.height);
+  mc.fillStyle=BG; mc.fillRect(0,0,map.width,map.height);
   mc.imageSmoothingEnabled=true; mc.drawImage(hm.buf,BOX.x,BOX.y,BOX.w,BOX.h);
   const m=VZ.frame(mc,BOX,{xr:[8.2,9.1],yr:[-30,0],xstep:0.1,ystep:5,xlabel:'B (T)',ylabel:'δV_g (mV)'});
   VZ.colorbar(mc,BOX.x+BOX.w+18,BOX.y,14,BOX.h,(-g.vmax).toFixed(2),g.vmax.toFixed(2),'δG');
   // slope annotation lines through crosshair
   if(el('c_slope').checked){
     const d=FQH.derived(P());
-    drawSlopeLine(m,d.slope,'#7fe0ff');       // negative AB iso-phase
-    drawSlopeLine(m,d.transSlope,'#ff9a52');  // positive jump cross-section
+    drawSlopeLine(m,d.slope,ABCOL);       // negative AB iso-phase
+    drawSlopeLine(m,d.transSlope,JUMPCOL);  // positive jump cross-section
   }
   // crosshair
   mc.save(); mc.beginPath(); mc.rect(BOX.x,BOX.y,BOX.w,BOX.h); mc.clip();
-  mc.strokeStyle='#ffffff'; mc.lineWidth=1.2; mc.setLineDash([4,3]);
+  mc.strokeStyle=CROSS; mc.lineWidth=1.2; mc.setLineDash([4,3]);
   mc.beginPath(); mc.moveTo(m.X(Bsel),BOX.y); mc.lineTo(m.X(Bsel),BOX.y+BOX.h);
   mc.moveTo(BOX.x,m.Y(Vsel)); mc.lineTo(BOX.x+BOX.w,m.Y(Vsel)); mc.stroke(); mc.setLineDash([]);
-  mc.fillStyle='#fff'; mc.beginPath(); mc.arc(m.X(Bsel),m.Y(Vsel),3.5,0,7); mc.fill(); mc.restore();
+  mc.fillStyle=CROSS; mc.beginPath(); mc.arc(m.X(Bsel),m.Y(Vsel),3.5,0,7); mc.fill(); mc.restore();
   return m;
 }
 function drawSlopeLine(m,slope,col){
@@ -125,26 +133,26 @@ function drawSlopeLine(m,slope,col){
 }
 function drawCutH(){
   const L=lineVsB(Vsel,P(),320);
-  hc.fillStyle='#0c0e12'; hc.fillRect(0,0,cutH.width,cutH.height);
+  hc.fillStyle=BG; hc.fillRect(0,0,cutH.width,cutH.height);
   let amax=0.01; for(const d of L.dG) amax=Math.max(amax,Math.abs(d));
   const X=b=>BOXH.x+(b-8.2)/0.9*BOXH.w, Y=d=>BOXH.y+(amax-d)/(2*amax)*BOXH.h;
-  hc.strokeStyle='#333'; hc.beginPath(); hc.moveTo(BOXH.x,Y(0)); hc.lineTo(BOXH.x+BOXH.w,Y(0)); hc.stroke();
-  hc.strokeStyle='#7fe0ff'; hc.lineWidth=1.8; hc.beginPath();
+  hc.strokeStyle=ZERO; hc.beginPath(); hc.moveTo(BOXH.x,Y(0)); hc.lineTo(BOXH.x+BOXH.w,Y(0)); hc.stroke();
+  hc.strokeStyle=ABCOL; hc.lineWidth=1.8; hc.beginPath();
   for(let i=0;i<L.B.length;i++){ const x=X(L.B[i]),y=Y(L.dG[i]); i?hc.lineTo(x,y):hc.moveTo(x,y);} hc.stroke();
   // crosshair B marker
-  hc.strokeStyle='#fff'; hc.setLineDash([4,3]); hc.beginPath(); hc.moveTo(X(Bsel),BOXH.y); hc.lineTo(X(Bsel),BOXH.y+BOXH.h); hc.stroke(); hc.setLineDash([]);
+  hc.strokeStyle=CROSS; hc.setLineDash([4,3]); hc.beginPath(); hc.moveTo(X(Bsel),BOXH.y); hc.lineTo(X(Bsel),BOXH.y+BOXH.h); hc.stroke(); hc.setLineDash([]);
   VZ.frame(hc,BOXH,{xr:[8.2,9.1],yr:[-amax,amax],xstep:0.1,ystep:amax,xlabel:'B (T)',ylabel:'δG',yfmt:v=>v.toFixed(2)});
   el('o_bp').textContent=(()=>{const p=period(L.B,L.dG,0.05*amax);return p?(p*1e3).toFixed(0)+' mT':'—';})();
 }
 function drawCutV(){
   const L=FQH.lineVsVg(Bsel,P(),300,{vtop:0,vbot:-30});
-  vc.fillStyle='#0c0e12'; vc.fillRect(0,0,cutV.width,cutV.height);
+  vc.fillStyle=BG; vc.fillRect(0,0,cutV.width,cutV.height);
   let amax=0.01; for(const d of L.dG) amax=Math.max(amax,Math.abs(d));
   const X=v=>BOXV.x+(v-(-30))/30*BOXV.w, Y=d=>BOXV.y+(amax-d)/(2*amax)*BOXV.h;
-  vc.strokeStyle='#333'; vc.beginPath(); vc.moveTo(BOXV.x,Y(0)); vc.lineTo(BOXV.x+BOXV.w,Y(0)); vc.stroke();
-  vc.strokeStyle='#ff9a52'; vc.lineWidth=1.8; vc.beginPath();
+  vc.strokeStyle=ZERO; vc.beginPath(); vc.moveTo(BOXV.x,Y(0)); vc.lineTo(BOXV.x+BOXV.w,Y(0)); vc.stroke();
+  vc.strokeStyle=JUMPCOL; vc.lineWidth=1.8; vc.beginPath();
   for(let i=0;i<L.Vg.length;i++){ const x=X(L.Vg[i]),y=Y(L.dG[i]); i?vc.lineTo(x,y):vc.moveTo(x,y);} vc.stroke();
-  vc.strokeStyle='#fff'; vc.setLineDash([4,3]); vc.beginPath(); vc.moveTo(X(Vsel),BOXV.y); vc.lineTo(X(Vsel),BOXV.y+BOXV.h); vc.stroke(); vc.setLineDash([]);
+  vc.strokeStyle=CROSS; vc.setLineDash([4,3]); vc.beginPath(); vc.moveTo(X(Vsel),BOXV.y); vc.lineTo(X(Vsel),BOXV.y+BOXV.h); vc.stroke(); vc.setLineDash([]);
   VZ.frame(vc,BOXV,{xr:[-30,0],yr:[-amax,amax],xstep:5,ystep:amax,xlabel:'δV_g (mV)',ylabel:'δG',yfmt:v=>v.toFixed(2)});
   el('o_vp').textContent=(()=>{const p=period(L.Vg,L.dG,0.05*amax);return p?p.toFixed(1)+' mV':'—';})();
 }

@@ -17,7 +17,7 @@
   <div class="plots">
     <div class="card">
       <h2>모식도 (전류 흐름 애니메이션)</h2>
-      <canvas id="cv" width="760" height="540"></canvas>
+      <canvas id="cv" width="940" height="540"></canvas>
     </div>
   </div>
   <div class="controls">
@@ -89,7 +89,7 @@ const CL=1300, CR=1958, CT=1520, CB=2008;
 // ---- layout & transform ------------------------------------------------------
 let SC, OX, OY;
 function layout(){
-  const padL=96, padR=24, padT=84, padB=20;
+  const padL=90, padR=200, padT=40, padB=20;   // padR reserves the right legend column
   SC=Math.min((cv.width-padL-padR)/RW, (cv.height-padT-padB)/RH);
   OX=padL; OY=padT;
 }
@@ -124,6 +124,27 @@ function fieldDot(rx,ry,r,al){ const x=sx(rx),y=sy(ry); ctx.save(); ctx.globalAl
   ctx.beginPath(); ctx.arc(x,y,r,0,2*Math.PI); ctx.stroke(); ctx.beginPath(); ctx.arc(x,y,r*0.22,0,2*Math.PI); ctx.fill(); ctx.restore(); }
 function fieldDot2(x,y,r){ ctx.strokeStyle=FIELD; ctx.fillStyle=FIELD; ctx.lineWidth=1.6;
   ctx.beginPath(); ctx.arc(x,y,r,0,2*Math.PI); ctx.stroke(); ctx.beginPath(); ctx.arc(x,y,r*0.22,0,2*Math.PI); ctx.fill(); }
+// circuit ground symbol (2x size): lead ends at (gx,gy); three tapering bars step in `dir` (1=down, -1=up)
+function ground(gx,gy,dir){
+  ctx.strokeStyle=INK; ctx.lineWidth=2.6; ctx.setLineDash([]);
+  ctx.beginPath(); ctx.moveTo(gx,gy); ctx.lineTo(gx,gy+8*dir); ctx.stroke();
+  const hw=[18,12,6];
+  for(let i=0;i<3;i++){ const yy=gy+(8+i*7)*dir; ctx.beginPath(); ctx.moveTo(gx-hw[i],yy); ctx.lineTo(gx+hw[i],yy); ctx.stroke(); }
+}
+// italic math variable with a subscript, left-aligned baseline at (x,y)
+function mathVar(base,sub,x,y){
+  ctx.fillStyle=INK; ctx.textAlign='left';
+  ctx.font='italic 18px "Cambria Math",Georgia,serif'; ctx.fillText(base,x,y);
+  const w=ctx.measureText(base).width;
+  ctx.font='italic 12px "Cambria Math",Georgia,serif'; ctx.fillText(sub,x+w+1,y+5);
+}
+// "phase difference = θ" label, left-aligned baseline at (x,y)
+function phaseLabel(x,y){
+  ctx.fillStyle=INK; ctx.textAlign='left'; ctx.font='13px sans-serif';
+  const s='phase difference = '; ctx.fillText(s,x,y);
+  const w=ctx.measureText(s).width;
+  ctx.font='italic 17px "Cambria Math",Georgia,serif'; ctx.fillText('θ',x+w,y);
+}
 
 function draw(){
   layout();
@@ -135,12 +156,9 @@ function draw(){
   // metal gates (yellow)
   for(const g of GATES){ fillP(g,'#c9c08a'); strokeP(g,'#8d855a',1); }
 
-  // depletion inset (effective edge) + enclosed area, shrinks with -V (exaggerated)
+  // enclosed chamber extent (kept for quasiparticle placement + A_I readout), shrinks with -V
   const dep=-V;                               // raw px inset (V in [-30,0] -> 0..30)
   const il=CL+dep, ir=CR-dep, it=CT+dep, ib=CB-dep;
-  ctx.fillStyle=DEPF; ctx.fillRect(sx(il),sy(it),(ir-il)*SC,(ib-it)*SC);
-  ctx.strokeStyle=DEPS; ctx.setLineDash([5,4]); ctx.lineWidth=1.2;
-  ctx.strokeRect(sx(il),sy(it),(ir-il)*SC,(ib-it)*SC); ctx.setLineDash([]);
 
   // inner / return edges (always present, faint, slow flow)
   strokeP(DASH1,'rgba(255,120,120,.55)',2,[24,16],-phase*0.5);
@@ -151,6 +169,9 @@ function draw(){
 
   // QPC backscatter reflections (left=QPC1, right=QPC2), strength = 1-T
   refl(1215,1763,1-T); refl(2044,1763,1-T);
+  // backscattering amplitudes r1, r2 to the right of each reflection symbol
+  mathVar('r','1', sx(1215)+22, sy(1763)+6);
+  mathVar('r','2', sx(2044)+22, sy(1763)+6);
 
   // localized quasiparticles inside the (shrunken) chamber
   const cx=(il+ir)/2, cy=(it+ib)/2;
@@ -161,31 +182,36 @@ function draw(){
   // out-of-plane symbol = circle with a centre dot. Faint copies over the open 2DES corners.
   for(const c of [[1010,1380],[2235,1380],[1010,2120],[2235,2120]]) fieldDot(c[0],c[1],8,0.5);
 
-  // source (AC); the bottom-left contact is the grounded return (no "drain" label)
-  ctx.strokeStyle=INK; ctx.lineWidth=1.6;
-  const sxs=44, sys=sy(1305); ctx.beginPath(); ctx.arc(sxs,sys,13,0,2*Math.PI); ctx.stroke();
-  ctx.beginPath(); ctx.moveTo(sxs-7,sys); ctx.bezierCurveTo(sxs-3,sys-7,sxs+3,sys+7,sxs+7,sys); ctx.stroke();
-  ctx.beginPath(); ctx.moveTo(sxs+13,sys); ctx.lineTo(sx(925),sys); ctx.stroke();
-  const dxs=44, dys=sy(2202); ctx.beginPath(); ctx.moveTo(sx(918),dys); ctx.lineTo(dxs,dys); ctx.stroke();
-  for(let i=0;i<3;i++){ ctx.beginPath(); ctx.moveTo(dxs-9+i*3,dys+4+i*4); ctx.lineTo(dxs+9-i*3,dys+4+i*4); ctx.stroke(); }
-  ctx.beginPath(); ctx.moveTo(dxs,dys);ctx.lineTo(dxs,dys+4); ctx.stroke();
+  // ---- source (AC, top-left) + grounds: bottom-left return, top-right drain (2x) ----
+  ctx.strokeStyle=INK; ctx.lineWidth=2.6; ctx.setLineDash([]);
+  const sys=sy(1305), sxs=46, sr=26;
+  ctx.beginPath(); ctx.arc(sxs,sys,sr,0,2*Math.PI); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(sxs-13,sys); ctx.bezierCurveTo(sxs-6,sys-13,sxs+6,sys+13,sxs+13,sys); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(sxs+sr,sys); ctx.lineTo(sx(925),sys); ctx.stroke();
+  // bottom-left ground (return)
+  const dys=sy(2202); ctx.beginPath(); ctx.moveTo(sx(918),dys); ctx.lineTo(50,dys); ctx.stroke(); ground(50,dys,1);
+  // top-right ground (drain) at the chiral-edge exit; bars point up to clear the legend
+  const drx=OX+RW*SC; ctx.beginPath(); ctx.moveTo(drx,sys); ctx.lineTo(drx+30,sys); ctx.stroke(); ground(drx+30,sys,-1);
 
   // labels
   ctx.fillStyle=INK; ctx.font='12px sans-serif'; ctx.textAlign='center';
   ctx.fillText('QPC 1', sx(1215), sy(1640)); ctx.fillText('QPC 2', sx(2044), sy(1640));
-  ctx.textAlign='left'; ctx.fillText('I_source', 26, sys-20);
-  ctx.fillStyle=SUB; ctx.textAlign='center'; ctx.fillText('interferometer chamber (2DES)', sx((CL+CR)/2), sy(CB)+16);
-  // legend
-  ctx.textAlign='left'; ctx.font='11px sans-serif';
-  ctx.fillStyle='#c9c08a'; ctx.fillRect(sx(RX0),20,12,12); ctx.fillStyle=SUB; ctx.fillText('metal gate', sx(RX0)+16,30);
-  ctx.fillStyle=MESA; ctx.fillRect(sx(RX0)+100,20,12,12); ctx.strokeStyle=MESA_ST; ctx.strokeRect(sx(RX0)+100,20,12,12); ctx.fillStyle=SUB; ctx.fillText('2DES', sx(RX0)+116,30);
-  ctx.strokeStyle='#ff5a5a'; ctx.lineWidth=2.4; ctx.beginPath(); ctx.moveTo(sx(RX0)+170,26); ctx.lineTo(sx(RX0)+195,26); ctx.stroke(); ctx.fillStyle=SUB; ctx.fillText('chiral edge', sx(RX0)+200,30);
-  ctx.fillStyle=REFL; ctx.fillText('⤿ backscatter', sx(RX0)+285,30);
-  // magnetic-field key (top-right)
-  const bX=cv.width-184;
-  fieldDot2(bX,26,8); fieldDot2(bX+22,26,8);
-  ctx.fillStyle=FIELD; ctx.font='bold 13px sans-serif'; ctx.textAlign='left'; ctx.fillText('B', bX+40,30);
-  ctx.fillStyle=SUB; ctx.font='10px sans-serif'; ctx.fillText('⊥ 2DES · out of page (≈8.65 T)', bX-6,46);
+  // phase difference θ where the two backscattered paths meet (lower-left)
+  phaseLabel(sx(985), sy(2010));
+  // legend — vertical column to the right of the device
+  const lx=OX+RW*SC+22; let ly=84; const lg=36;
+  ctx.textAlign='left'; ctx.font='12px sans-serif';
+  ctx.fillStyle='#c9c08a'; ctx.fillRect(lx,ly-11,14,14); ctx.strokeStyle='#8d855a'; ctx.lineWidth=1; ctx.strokeRect(lx,ly-11,14,14);
+  ctx.fillStyle=SUB; ctx.fillText('metal gate', lx+22,ly); ly+=lg;
+  ctx.fillStyle=MESA; ctx.fillRect(lx,ly-11,14,14); ctx.strokeStyle=MESA_ST; ctx.strokeRect(lx,ly-11,14,14);
+  ctx.fillStyle=SUB; ctx.fillText('2DES', lx+22,ly); ly+=lg;
+  ctx.strokeStyle='#ff5a5a'; ctx.lineWidth=2.6; ctx.beginPath(); ctx.moveTo(lx,ly-4); ctx.lineTo(lx+16,ly-4); ctx.stroke();
+  ctx.fillStyle=SUB; ctx.fillText('chiral edge', lx+22,ly); ly+=lg;
+  ctx.fillStyle=REFL; ctx.fillText('⤿ backscatter', lx,ly); ly+=lg+12;
+  // magnetic-field key
+  fieldDot2(lx+7,ly-4,8); fieldDot2(lx+29,ly-4,8);
+  ctx.fillStyle=FIELD; ctx.font='bold 14px sans-serif'; ctx.fillText('B', lx+46,ly); ly+=20;
+  ctx.fillStyle=SUB; ctx.font='10px sans-serif'; ctx.fillText('⊥ 2DES  (≈ 8.65 T)', lx,ly);
 
   // readouts (A_I tracks the visual inset; nominal 0.38 um^2 at V=0)
   const af=((ir-il)*(ib-it))/((CR-CL)*(CB-CT));
