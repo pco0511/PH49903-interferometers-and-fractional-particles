@@ -371,31 +371,22 @@ const DECK = [
 
   { type:'content', section:'Results · Phase slips',
     title:'Control: ν = 1 Shows No Phase Slips',
-    fig:{ kind:'img', src:F+'supp-fig6.png' },
-    steps:[
-      '$\\nu=1$ fermions: $\\;\\theta_{\\mathrm{fermion}}=2\\pi\\;$ (trivial)',
-      'Only negative-slope AB fringes — no discrete jumps',
-      'Decisive control: the jumps are an anyon effect',
-    ] },
+    fig:{ kind:'img', src:F+'supp-fig6.png' } },
 
   // merged temperature slide: theory with a temperature slider (raise T -> dephasing)
   { type:'content', section:'Results · Temperature',
     title:'Temperature Dependence (theory): Dephasing',
-    fig:{ kind:'iframe', src:V+'simulation/d1-heatmap.html?embed&light=1', w:1180, h:640 },
-    steps:[
-      'Thermal average $\\;\\langle\\delta G\\rangle=\\tfrac1Z\\sum_N e^{-E(N)/kT}\\cos(\\theta_{AB}+N\\theta_{\\mathrm{anyon}})$',
-      'Raise the Temperature slider $\\to$ fringes wash out (dephasing); strongest off-center where $N_{\\mathrm{qp}}$ fluctuates',
-    ] },
+    fig:{ kind:'iframe', src:V+'simulation/d1-heatmap.html?embed&light=1', w:1180, h:640 } },
 
   // ---- Backup --------------------------------------------------------------
-  { type:'content', section:'Backup',
-    title:'Transition: Constant Filling → Constant Density',
-    fig:{ kind:'iframe', src:V+'concepts/a3-dos-regimes.html?embed=fig&light=1', w:760, h:440 } },
-
   { type:'content', section:'Backup',
     title:'Experimental Details',
     fig:{ kind:'iframe', src:V+'device/b2-layer-stack.html?embed=fig&light=1', w:520, h:560 },
     steps:[ 'Screening-well heterostructure suppresses Coulomb-dominated charging' ] },
+
+  { type:'content', section:'Backup',
+    title:'Transition: Constant Filling → Constant Density',
+    fig:{ kind:'iframe', src:V+'concepts/a3-dos-regimes.html?embed=fig&light=1', w:760, h:440 } },
 ];
 
 // ============================================================================

@@ -18,8 +18,8 @@
   .side{ flex:0 0 auto; display:flex; flex-direction:column; gap:10px; }
 
   .frame{ position:relative; background:#fff; border:1px solid #2a2f39; border-radius:8px; overflow:hidden; }
-  .now .frame{ width:44vh; aspect-ratio:16/9; }          /* compact previews -> notes gets the room */
-  .next .frame{ width:26vh; aspect-ratio:16/9; }
+  .now .frame{ width:82vh; max-width:64vw; aspect-ratio:16/9; }   /* presenting slide ~2x; notes keeps the rest */
+  .next .frame{ width:24vh; aspect-ratio:16/9; }
   .frame iframe{ position:absolute; inset:0; width:100%; height:100%; border:0; pointer-events:none; background:#fff; }
   .now .frame iframe{ pointer-events:auto; }             /* current preview is interactive: sliders / slice / pointer */
   .frame .end{ position:absolute; inset:0; display:none; align-items:center; justify-content:center;
@@ -88,15 +88,26 @@ nxt.src='index.html?nosync#'+(si+2);
 function drive(frame,n){ try{ const w=frame.contentWindow; if(w&&w.__deck) w.__deck.go(n); }catch(e){} }
 cur.addEventListener('load',()=>{ try{ N=cur.contentWindow.__deck.N||N; }catch(e){} goto(si,'init'); attachPointer(); });
 
-// ---- laser pointer: mouse over the current preview -> red dot on the audience slide ----
+// ---- laser pointer: mouse anywhere over the current preview (incl. nested figure iframes) -> dot on audience ----
+// Nested iframes (slice / device) swallow mousemove, so we attach to every frame in the preview and
+// map each frame's coords up through its frameElement to the deck's coordinate system.
+let _ptRaf=0,_ptPend=null,_reattach=null;
+function emitPoint(p){ _ptPend=p; if(_ptRaf) return; _ptRaf=requestAnimationFrame(()=>{ _ptRaf=0; if(bc&&_ptPend) bc.postMessage(_ptPend); }); }
 function attachPointer(){
-  let doc; try{ doc=cur.contentDocument; }catch(e){ return; } if(!doc) return;
-  let raf=0, xy=null;
-  doc.addEventListener('mousemove',ev=>{ const w=cur.contentWindow;
-    xy=[ev.clientX/w.innerWidth, ev.clientY/w.innerHeight];
-    if(!raf) raf=requestAnimationFrame(()=>{ raf=0; if(xy&&bc) bc.postMessage({type:'point', x:xy[0], y:xy[1], on:true}); }); });
-  doc.addEventListener('mouseleave',()=>{ if(bc) bc.postMessage({type:'point', on:false}); });
+  let deckWin; try{ deckWin=cur.contentWindow; }catch(e){ return; }
+  const onMove=win=>e=>{ let x=e.clientX,y=e.clientY,w=win;
+    while(w&&w!==deckWin&&w.frameElement){ const r=w.frameElement.getBoundingClientRect();
+      x=r.left+x*(r.width/(w.innerWidth||1)); y=r.top+y*(r.height/(w.innerHeight||1)); w=w.parent; }
+    emitPoint({type:'point', x:x/deckWin.innerWidth, y:y/deckWin.innerHeight, on:true}); };
+  const attach=win=>{ let doc; try{ doc=win.document; }catch(e){ return; } if(!doc||doc.__ptr) return; doc.__ptr=1;
+    doc.addEventListener('mousemove', onMove(win), true);
+    for(let i=0;i<win.frames.length;i++){ try{ attach(win.frames[i]); }catch(e){} } };
+  _reattach=()=>{ try{ attach(deckWin); }catch(e){} };
+  _reattach();
+  try{ cur.contentDocument.addEventListener('load', e=>{ if(e.target&&e.target.tagName==='IFRAME'){   // catch lazily-loaded figure iframes
+    try{ attach(e.target.contentWindow); }catch(_){} } }, true); }catch(_){}
 }
+document.addEventListener('mousemove', ()=> emitPoint({type:'point', on:false}));   // cursor on presenter chrome -> hide dot
 
 // ---- cross-window sync (BroadcastChannel; same origin = GitHub Pages / localhost) ----
 const bc=window.BroadcastChannel ? new BroadcastChannel('phaseslip-deck') : null;
@@ -111,6 +122,7 @@ function goto(n,how){
   if(hasNext) drive(nxt,si+1);
   posEl.textContent=(si+1)+' / '+N;
   showNotes(si);
+  if(_reattach) setTimeout(_reattach, 650);                    // re-bind pointer to the new slide's figure iframes
   if(how!=='remote' && bc) bc.postMessage({type:'nav', si});   // push to the audience (and any other window)
 }
 

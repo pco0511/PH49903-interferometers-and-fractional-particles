@@ -3,7 +3,7 @@
 
 ## Slide 1: Title slide
 
-안녕하세요. Laughlin quasiparticle들의 fractional braiding statistics를 실험적으로 관측한 연구에 대해 발표하겠습니다.
+Anyon의 braiding statistics를 직접 관측한 연구에 관해 발표하겠습니다.
 
 ## Slide 2: Contents
 
@@ -11,21 +11,21 @@
 
 ## Slide 3: Fractional Braiding Statistics of Laughlin Quasiparticles
 
-먼저 수업시간에 Fractional filling의 Landau level에서 나타나는 ground state와 그 state에서 일어나는 particle-like한 excitation에 대해 배웠습니다. 실험 setting인 1/3 filling을 설명하는 laughlin state에서 나타나는 anyon들은 abelian anyon으로 exchange statistics가 $\pi/3$이고, 하나를 가만히 두고 다른 하나를 감으면, double exchange와 위상적으로 같아서 $2\pi/3$를 얻습니다. 
-
+수업시간에 Landau level의 Fractional filling에서 Anyon들에 대해 다루었었고, 실험 setting인 1/3 filling을 설명하는 exchange statistics가 $\pi/3$인 quasihole, quasielectrion가 나온다는 것을 배웠습니다. 실험에서 하는 것은 exchage가 아니라 하나를 가만히 두고 다른 하나를 한 바퀴 감는 데, 이게 두 번의 exchange와 같아서 $2\pi/3$ 만큼의 phase얻고, 이 $2\pi/3$를 측정 하는 것이 이 연구의 목표 중 하나입니다.
 
 ## Slide 4: Quantum Hall Interferometer -- Weak Backscattering
 
-그리고 Quantum Hall system에서의 Fabry-Perot에 대해서도 배웠고, 두 개의 quantum point contact에서 backscattering된 quasiparticle들이 서로 간섭해서 반사율과 투과율을 바꾸고, 그 결과 측정되는 conductance가 바뀝니다. 추가로 weak backscattering이라 scattering되는 particle이 electron이 아니라 fractionalized quasiparticle이라는 점도 중요합니다. 
+그리고 Quantum Hall system에서의 Fabry-Perot에 대해서도 다루었습니다. 두 개의 quantum point contact에서 각각 scattering된 두 개의 경로가 서로 간섭해서 phase difference에 의존하게 반사율과 투과율을 바꾸고, 그 결과 conductance가 바뀌는 것을 측정해서. phase difference를 알아냅니다. 
+그리고 하나 더 중요한 부분이 실험이 weak backscattering이라 scattering되는 particle이 electron이 아니라 fractionalized quasiparticle이라는 점도 중요합니다. 
 
 
 ## Slide 5: Quantum Hall Interferometer -- Two Sources of Phaes Difference
 
-간섭 실험에서 중요한건 여기 이 phase difference이고, 이 interferometer의 phase difference를 만드는 원인은 두 가지가 있습니다. 첫 번째는 일단 자기장이 있으니 Aharonov-Bohm phase가 있고, quasi particle들도 있으니 얘네들이 의한 braiding statistics도 있습니다. 이 연구의 목표는 여기 이 두 번째 term을 실험적으로 보는 것입니다.
+간섭 실험에서 중요한건 여기 이 phase difference이고, 이 interferometer의 phase difference를 만드는 원인은 두 가지가 있습니다. 첫 번째는 path들이 감싸는 영역을 통과하는 자기장에 의한 Aharonov-Bohm phase가 있고, 두 번째로는 이 연구의 목표인 anyon의 braiding에 의한 phase가 있습니다.
 
 ## Slide 6: Setup and Result
 
-월요일에 발표해주셨던 Mach-Zehnder interferometer를 생각해보면 두 가지를 조절했었는데, Magnetic field, gate voltage였습니다. magnetic field를 바꾸면 당연히 여기를 통과하는 flux가 바뀔거고, oscillation이 생깁니다. gate voltage를 바꾸면 여기 넓이가 바뀌고, 이것도 flux를 바꿔서 oscillation을 일으킵니다. 실험 결과를 봐도 그렇고요.  
+실험은 월요일에 발표해주셨던 Mach-Zehnder interferometer와 비슷한데, 여기서도 그 실험과 동일하게 magnetic, gate voltage였습니다. magnetic field를 바꾸면 당연히 여기를 통과하는 flux가 바뀔거고, oscillation이 생깁니다. gate voltage를 바꾸면 여기 넓이가 바뀌고, 이것도 flux를 바꿔서 oscillation을 일으킵니다. 실험 결과를 봐도 그렇고요.  
 
 ## Slide 7: Anyon Braid Statistics
 
@@ -35,34 +35,16 @@
 
 ## Slide 8: Transition from constant filling to constant density
 
-이 연구의 두 번째 결과는 magnetic field를 키울 때 quasiparticle이 사라지거나 quasihole이 생기는 주기에 관한 것 입니다. 생각해보면 quasihole들은 flux quantum $\Phi_0$ 하나씩을 달고 다니고, quasiparticle들은 $-\Phi_0$만큼을 달고 다니는데, 실험 겱과를 보면 그렇지 않습니다. 아까 Aharonov-Bohm phase에 의한 oscillation의 주기가 $3\Phi_0$였다고 했는데, quasihole이 $\Phi_0$마다 하나씩 생겨난다면 $3\Phi_0$주기의 oscillation이 잘 보이는게 이상하죠.
+이 연구의 두 번째 결과는 magnetic field를 키울 때 quasiparticle이 사라지거나 quasihole이 생기는 주기에 관한 것 입니다. 생각해보면 quasihole들은 flux quantum $\Phi_0$를 하나 씩 가져서 $\Phi_0$씩 넣을 때 마다 quasihole이 하나씩 생기거나 quasiparticle이 하나씩 줄어들거아 해야 할 것 같습니다. 하지만 결과를 보면 그렇지 않습니다.여기 이 oscillation의 주기가 $3\Phi_0$였다고 했는데, quasihole이 $\Phi_0$마다 하나씩 생겨난다면 $3\Phi_0$주기의 oscillation이 잘 보이는게 이상하죠. 그래서 어떤 이유 때문에 quasihole이 생겨나거나 quasiparticle이 줄어드는 것이 억제되고 있다는 뜻입니다.
 
-이 부분을 설명하는 이론 연구가 따로 있습니다. 간략하게 설명하자면, quasihole을 만들거나 quasi-particle을 제거하는데 에너지 비용이 들고, 그 에너지 비용 때문에 특정 magnetic field region에서는 quasihole/quasiparticle 수가 잘 변하지 않는다는 내용입니다. 실제로 이론 연구가 예상한 그 quasihole이 잘 증가하지 않는 magnetic field가 실험적으로 잘 관찰 되는 것 도 이 연구의 결과 중 하나입니다. 
-
-
-제목: Transition from constant filling to constant density
-
-(위쪽 그림: FIG3-b)
-
-아래에 reference:
-
-[17] Rosenow, B., & Stern, A. Flux Superperiods and Periodicity
-Transitions in Quantum Hall Interferometers. Phys.
-Rev. Lett. 124, 106805 (2020)
+이 연구는 이 문제를 quasihole이 생겨날 때 드는 에너지 비용으로 설명합니다. quasihole은 laughlin state의 excitation이니까 생성될 때 에너지가 들고, 특정 magnetic field 구역에서는 quasihole을 만들게 아니라 전자를 다른 곳에서 끌어와서 1/3 filling의 laughlin state를 유지하는게 에너지적으로 유리해서, 이런 구역이 생긴다고 해석합니다. 
 
 ## Slide 9
 
 제목: Two types of dephasing
 
-그리고 interfometer에 관한 연구니까 dephasing에 관한 논의가 있었습니다. 온도를 높이면 Thermal fluctuation 때문에 phasing이 일어나고 간섭 무늬을 amplitude가 줄어듭니다. 왼쪽의 figure만 봐도 이 두 부분이 dephasing이 커 보이는데, 실제로 정량적으로 비교 해 봐도 중간 영역은 dephasing이 약해보이고, 이쪽 고자기장 영역, 저자기장 영역은 dephasing이 커보입니다. 여기 중간 영역에서 나타나는 dephasing은 
-
-$$
-\langle\delta G\rangle = \frac{1}{Z}\sum_N e^{-\beta E(N)}\cos(\theta_{\mathrm{AB}} + N\theta_{\mathrm{anyon}})
-$$
+그리고 interfometer에 관한 연구니까 dephasing에 관한 논의가 있었습니다. 왼쪽의 이 그림을 봐도 여기 중간영역은 dephasing이 작고, 바깥 영역은 dephasing이 커보입니다. 연구에서는 이 두 영역에서 anyon number의 fluctuation에 의한 추가적인 dephasing이 있다고 설명합니다. 여기 두 영역은 single $\Phi_0$마다 anyon이 생겨나서 anyon들이 많은 영역이고, 따라서 anyon number의 fluctuation이 큰 영역이기에, 더 많은 dephasing이 일어나는 것이 자연스럽게 됩니다.
 
 ## Slide 10
 
-제목: Summary
-
-세 가지 결과 slide
-
+요약하면, 이 연구는 Fabry–Pérot 간섭계로 anyon의 braiding statistics를 직접 관측한 연구입니다. 주요 결과는 세 가지로, phase jump로부터 braiding phase가 $2\pi/3$임을 측정했고, quasihole, quasiparticle의 생성이 적은 영역을 에너지 비용을 통해 설명했으며, anyon number의 fluctuation에 의한 추가적인 dephasing을 관측했습니다. 이상으로 발표를 마치겠습니다. 감사합니다.
