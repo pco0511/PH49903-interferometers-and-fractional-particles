@@ -292,21 +292,25 @@ function setSource(s){ SRC=s; const e=M().extent;
   el('s_sa').value = ov? ov.slopeAB : -150;
   el('s_sb').value = ov? ov.slopeJump : 450;
   render(); }
+function setSel(b,v,emit){ el('s_B').value=b; el('s_V').value=v; schedule();      // move crosshair; emit to the deck for cross-window sync
+  if(emit){ try{ if(parent!==window) parent.postMessage({type:'slice', B:+b, V:+v}, '*'); }catch(_){} } }
 function pick(ev){ const r=map.getBoundingClientRect(), e=M().extent;
   const px=(ev.clientX-r.left)*map.width/r.width, py=(ev.clientY-r.top)*map.height/r.height;
   let b=e[0]+(px-BOX.x)/BOX.w*(e[1]-e[0]); let v=e[3]-(py-BOX.y)/BOX.h*(e[3]-e[2]);
   b=Math.max(e[0],Math.min(e[1],b)); v=Math.max(e[2],Math.min(e[3],v));
-  el('s_B').value=b; el('s_V').value=v; schedule(); }
+  setSel(b,v,true); }
 function pickJ(ev){ const r=cj.getBoundingClientRect(), e=M().extent;   // joint canvas: map over the JM heatmap box
   const px=(ev.clientX-r.left)*cj.width/r.width, py=(ev.clientY-r.top)*cj.height/r.height;
   let b=e[0]+(px-JM.x)/JM.w*(e[1]-e[0]); let v=e[3]-(py-JM.y)/JM.h*(e[3]-e[2]);
   b=Math.max(e[0],Math.min(e[1],b)); v=Math.max(e[2],Math.min(e[3],v));
-  el('s_B').value=b; el('s_V').value=v; schedule(); }
+  setSel(b,v,true); }
 let dragging=false;
 const PICK=JOINT?pickJ:pick, PICKCV=JOINT?cj:map;
 PICKCV.addEventListener('mousedown',e=>{dragging=true;PICK(e);});
 window.addEventListener('mousemove',e=>{if(dragging)PICK(e);});
 window.addEventListener('mouseup',()=>{dragging=false;});
+window.addEventListener('message',ev=>{ const d=ev.data;                  // accept crosshair set from the deck (cross-window sync)
+  if(d&&d.type==='sliceSet'){ setSel(d.B,d.V,false); } });
 document.querySelectorAll('button[data-src]').forEach(b=>b.addEventListener('click',()=>{
   document.querySelectorAll('button[data-src]').forEach(x=>x.classList.remove('active')); b.classList.add('active'); setSource(b.dataset.src); }));
 for(const id of ['s_B','s_V','s_sa','s_sb']) el(id).addEventListener('input',schedule);

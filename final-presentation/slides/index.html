@@ -136,6 +136,11 @@
   .slide-eqn{ position:absolute; display:inline-block; }
   .slide-eqn .katex-display{ margin:0; }
   .slide-eqn.eqn-s9{ left:96px; bottom:104px; font-size:25px; }   /* slide 9: lower-left, clearly visible */
+  /* laser pointer dot driven from the presenter window (BroadcastChannel) */
+  .laserdot{ position:absolute; width:20px; height:20px; margin:-10px 0 0 -10px; border-radius:50%;
+    background:radial-gradient(circle at 50% 50%, rgba(233,55,37,.95), rgba(233,55,37,.6) 58%, rgba(233,55,37,0) 70%);
+    box-shadow:0 0 0 2px rgba(255,255,255,.92), 0 0 16px 6px rgba(233,55,37,.5);   /* white ring = visible on any background */
+    pointer-events:none; z-index:60; display:none; }
 
   /* cover */
   .cover{ justify-content:center; padding:0 90px; }
@@ -480,7 +485,9 @@ if(window.renderMathInElement) renderMathInElement(stage,{
   const send=()=>{ try{ fr.contentWindow&&fr.contentWindow.postMessage(
     {type:'live', B:+sB.value, Vg:+sV.value}, '*'); }catch(e){} };
   fr.addEventListener('load', send);                 // push initial state once the device boots
-  sB.addEventListener('input', send); sV.addEventListener('input', send);
+  const onInput=()=>{ send(); if(window.__deckBC) window.__deckBC.postMessage({type:'s6', B:+sB.value, Vg:+sV.value}); };
+  sB.addEventListener('input', onInput); sV.addEventListener('input', onInput);
+  window.__applyS6=(B,Vg)=>{ sB.value=B; sV.value=Vg; send(); };   // remote apply (value set doesn't fire input -> no echo)
   ['click','mousedown','pointerdown','wheel','keydown'].forEach(ev=>
     ui.addEventListener(ev, e=>e.stopPropagation()));
 })();
@@ -491,6 +498,7 @@ if(window.renderMathInElement) renderMathInElement(stage,{
 const slides=[...stage.children];
 const hud=document.getElementById('hud');
 let si=0, _stops=[];
+const IS_PREVIEW = new URLSearchParams(location.search).has('nosync');   // presenter preview iframe: no self-navigation
 
 function lazyload(i){
   slides[i].querySelectorAll('iframe[data-src]').forEach(fr=>{
@@ -529,6 +537,7 @@ function fit(){
 }
 addEventListener('resize', fit);
 addEventListener('keydown', e=>{
+  if(IS_PREVIEW) return;                                   // preview iframes never self-navigate
   if(e.key==='ArrowRight'||e.key==='PageDown'||e.key===' '){ go(si+1); e.preventDefault(); }
   else if(e.key==='ArrowLeft'||e.key==='PageUp'){ go(si-1); e.preventDefault(); }
   else if(e.key==='Home'){ go(0); }
@@ -536,11 +545,12 @@ addEventListener('keydown', e=>{
   else if(e.key==='f'||e.key==='F'){ if(!document.fullscreenElement) document.documentElement.requestFullscreen(); else document.exitFullscreen(); }
   else if(e.key==='p'||e.key==='P'){ window.open('presenter.html'+(location.hash||''), 'presenter', 'width=1180,height=760'); }
 });
-stage.addEventListener('click', e=>{ if(e.clientX < window.innerWidth*0.25) go(si-1); else go(si+1); });
+stage.addEventListener('click', e=>{ if(IS_PREVIEW) return; if(e.clientX < window.innerWidth*0.25) go(si-1); else go(si+1); });
 
 // mouse-wheel / trackpad: one gesture = one slide (jitter threshold + 50 ms cooldown)
 let wheelLock=false;
 addEventListener('wheel', e=>{
+  if(IS_PREVIEW) return;
   if(Math.abs(e.deltaY)<8) return;
   e.preventDefault();
   if(wheelLock) return;
@@ -552,18 +562,38 @@ addEventListener('wheel', e=>{
 // expose for headless layout testing
 window.__deck = { go, get si(){return si;}, N };
 
-// ---- presenter sync: mirror navigation across same-origin windows (GitHub Pages / localhost) ----
-// `?nosync` (the presenter's preview iframes) opts out so previews don't drive the room.
+// ---- presenter sync: mirror navigation + live interactions + laser pointer across same-origin windows ----
+// Navigation is broadcast only by real decks; the presenter's `?nosync` preview iframes still relay
+// interactions and the pointer so the room stays live, but never drive slide changes themselves.
 (function(){
-  if(new URLSearchParams(location.search).has('nosync')){
-    const h=document.getElementById('hint'); if(h) h.style.display='none'; return;   // previews: hide chrome, no sync
-  }
+  if(IS_PREVIEW){ const h=document.getElementById('hint'); if(h) h.style.display='none'; }
   if(!window.BroadcastChannel) return;
   const bc=new BroadcastChannel('phaseslip-deck');
-  const baseGo=go; let applying=false;
-  go=n=>{ baseGo(n); if(!applying) bc.postMessage({type:'nav', si}); };               // broadcast local navigation
-  bc.onmessage=e=>{ const d=e.data;                                                   // apply remote navigation (no echo)
-    if(d&&d.type==='nav'&&d.si!==si){ applying=true; baseGo(d.si); applying=false; } };
+  window.__deckBC=bc;                                                                 // slide-6 sliders broadcast through this
+
+  if(!IS_PREVIEW){                                                                    // navigation sync (real decks only)
+    const baseGo=go; let applying=false;
+    go=n=>{ baseGo(n); if(!applying) bc.postMessage({type:'nav', si}); };
+    window.__navApply=n=>{ applying=true; baseGo(n); applying=false; };
+  }
+
+  let dot=null;                                                                        // laser pointer overlay
+  function showDot(x,y,on){
+    if(!on){ if(dot) dot.style.display='none'; return; }
+    if(!dot){ dot=document.createElement('div'); dot.className='laserdot'; stage.appendChild(dot); }
+    dot.style.display='block'; dot.style.left=(x*1280)+'px'; dot.style.top=(y*720)+'px';
+  }
+  const sliceFrames=()=>[...stage.querySelectorAll('iframe')]
+    .filter(f=>((f.getAttribute('src')||f.getAttribute('data-src')||'').includes('p-slice-measured')));
+  window.addEventListener('message',ev=>{ const d=ev.data;                            // a slice viz reports a user drag
+    if(d&&d.type==='slice') bc.postMessage({type:'slice', B:d.B, V:d.V}); });
+
+  bc.onmessage=e=>{ const d=e.data; if(!d) return;
+    if(d.type==='nav'){ if(!IS_PREVIEW && window.__navApply && d.si!==si) window.__navApply(d.si); }
+    else if(d.type==='point'){ showDot(d.x, d.y, d.on); }
+    else if(d.type==='s6'){ if(window.__applyS6) window.__applyS6(d.B, d.Vg); }
+    else if(d.type==='slice'){ sliceFrames().forEach(f=>{ try{ f.contentWindow.postMessage({type:'sliceSet', B:d.B, V:d.V}, '*'); }catch(_){} }); }
+  };
 })();
 
 const startSlide = (parseInt((location.hash||'').replace('#',''))||1) - 1;
