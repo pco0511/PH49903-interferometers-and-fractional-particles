@@ -16,21 +16,22 @@
 
 <div class="wrap">
   <div class="plots">
-    <div class="card">
+    <div class="card" id="card_map">
       <div class="row" style="justify-content:space-between">
         <h2 style="margin:0">측정 δG 맵 — 클릭/드래그로 십자선</h2>
         <div class="toggle"><button data-src="fig2" class="active">Fig 2</button><button data-src="fig3b">Fig 3b</button></div>
       </div>
       <canvas id="map" width="820" height="340"></canvas>
     </div>
-    <div class="card">
+    <div class="card" id="card_h">
       <h2>가로컷  δG vs B   @ δV_g = <b id="lab_v">–</b> mV</h2>
       <canvas id="cutH" width="820" height="150"></canvas>
     </div>
-    <div class="card">
+    <div class="card" id="card_v">
       <h2>세로컷  δG vs δV_g   @ B = <b id="lab_b">–</b> T</h2>
       <canvas id="cutV" width="820" height="150"></canvas>
     </div>
+    <div class="card" id="card_j" style="display:none"><canvas id="cvJ" width="820" height="470"></canvas></div>
   </div>
   <div class="controls">
     <div class="card">
@@ -86,9 +87,15 @@ const el=id=>document.getElementById(id);
 const map=el('map'), mc=map.getContext('2d');
 const cutH=el('cutH'), hc=cutH.getContext('2d');
 const cutV=el('cutV'), vc=cutV.getContext('2d');
+const cj=el('cvJ'), jc=cj.getContext('2d');
+const JOINT=new URLSearchParams(location.search).has('joint');   // single composite: heatmap + right vcut + bottom hcut
+const OVJOINT=new URLSearchParams(location.search).has('ov');     // ?ov — draw the paper-annotation overlay on the joint heatmap
 const BOX={x:54,y:14,w:670,h:296};
 const BH={x:54,y:14,w:670,h:106};
 const BV={x:54,y:14,w:670,h:106};
+const ANNO=OVJOINT?120:0;                // ?ov — top band reserved for phase-jump arrows + labels
+const JM={x:54,y:12+ANNO,w:552,h:300};   // heatmap region inside the joint canvas (?joint)
+if(OVJOINT) cj.height=470+ANNO;          // grow the joint canvas so the bottom cut still fits below the band
 let SRC='fig2', Bsel=8.85, Vsel=-17, hmCache={};
 function M(){ return window.MEASURED[SRC]; }
 function fmtUnit(u){ return (u||'').replace('x1e-2 e2/h','×10⁻² e²/h'); }   // pretty colorbar/axis unit
@@ -145,12 +152,35 @@ function slope(t,sl,col){ const e=M().extent; mc.save(); mc.beginPath(); mc.rect
 function OV(){ return window.OVERLAY && window.OVERLAY[SRC]; }
 function ovOn(){ return OV() && el('c_ov').checked; }
 const SLIPCOL=LIGHT?'#d11a9e':'#ff2bd6';                                 // phase-slip color (heatmap dashed + cut markers)
-function drawOverlay(t){ const ov=OV(); mc.save(); mc.beginPath(); mc.rect(BOX.x,BOX.y,BOX.w,BOX.h); mc.clip();
-  mc.lineCap='round'; mc.strokeStyle='rgba(12,12,4,0.95)'; mc.lineWidth=4;   // AB fringe markers (solid)
-  for(const s of ov.solid){ mc.beginPath(); mc.moveTo(t.X(s[0]),t.Y(s[1])); mc.lineTo(t.X(s[2]),t.Y(s[3])); mc.stroke(); }
-  mc.strokeStyle=SLIPCOL; mc.lineWidth=3.2; mc.setLineDash([7,4]);           // phase-slip boundaries (dashed, magenta)
-  for(const s of ov.dashed){ mc.beginPath(); mc.moveTo(t.X(s[0]),t.Y(s[1])); mc.lineTo(t.X(s[2]),t.Y(s[3])); mc.stroke(); }
-  mc.setLineDash([]); mc.restore(); }
+function overlayLines(g,X,Y,box,opt){ const ov=OV(); if(!ov)return; opt=opt||{};
+  g.save(); g.beginPath(); g.rect(box.x,box.y,box.w,box.h); g.clip(); g.lineCap='round';
+  if(opt.solid!==false){                                                    // iso-phase / AB fringe markers (solid)
+    g.strokeStyle='rgba(12,12,4,0.95)'; g.lineWidth=4;
+    for(const s of ov.solid){ g.beginPath(); g.moveTo(X(s[0]),Y(s[1])); g.lineTo(X(s[2]),Y(s[3])); g.stroke(); }
+  }
+  g.strokeStyle=opt.dashCol||SLIPCOL; g.lineWidth=3.2; g.setLineDash([7,4]); // phase-jump boundaries (dashed)
+  for(const s of ov.dashed){ g.beginPath(); g.moveTo(X(s[0]),Y(s[1])); g.lineTo(X(s[2]),Y(s[3])); g.stroke(); }
+  g.setLineDash([]); g.restore(); }
+function drawOverlay(t){ overlayLines(mc,t.X,t.Y,BOX); }
+// --- top-band phase-jump callouts (?ov): a Δθ/2π label + arrow pointing to each dashed line's top ---
+function fracLabel(cx,cy,val){ const Fnd=17,Feq=19,gap=12; jc.save(); jc.fillStyle=INK; jc.textBaseline='middle';
+  jc.font=Fnd+'px Georgia,"Times New Roman",serif'; const num='Δθ',den='2π';
+  const wF=Math.max(jc.measureText(num).width,jc.measureText(den).width);
+  jc.font=Feq+'px Georgia,"Times New Roman",serif'; const eq=' = '+val, wE=jc.measureText(eq).width;
+  const x0=cx-(wF+wE)/2;
+  jc.textAlign='center'; jc.font=Fnd+'px Georgia,"Times New Roman",serif';
+  jc.fillText(num,x0+wF/2,cy-gap); jc.fillText(den,x0+wF/2,cy+gap);
+  jc.strokeStyle=INK; jc.lineWidth=1.3; jc.beginPath(); jc.moveTo(x0,cy); jc.lineTo(x0+wF,cy); jc.stroke();
+  jc.textAlign='left'; jc.font=Feq+'px Georgia,"Times New Roman",serif'; jc.fillText(eq,x0+wF,cy); jc.restore(); }
+function arrowTo(x0,y0,x1,y1){ jc.save(); jc.strokeStyle=INK; jc.fillStyle=INK; jc.lineWidth=2; jc.lineCap='round';
+  jc.beginPath(); jc.moveTo(x0,y0); jc.lineTo(x1,y1); jc.stroke();
+  const a=Math.atan2(y1-y0,x1-x0), h=9, w=0.42;
+  jc.beginPath(); jc.moveTo(x1,y1); jc.lineTo(x1-h*Math.cos(a-w),y1-h*Math.sin(a-w)); jc.lineTo(x1-h*Math.cos(a+w),y1-h*Math.sin(a+w)); jc.closePath(); jc.fill(); jc.restore(); }
+function drawJumpArrows(X){ const ov=OV(); if(!ov) return;
+  const vals=['−0.29','−0.28','−0.38','−0.32'];   // Δθ/2π per dashed line (paper Fig 2)
+  const tips=ov.dashed.map(s=>X(s[0])), cen=tips.slice(), MIN=110;
+  for(let i=1;i<cen.length;i++) if(cen[i]-cen[i-1]<MIN) cen[i]=cen[i-1]+MIN;   // spread labels so they don't overlap
+  for(let i=0;i<tips.length;i++){ fracLabel(cen[i],42,vals[i]); arrowTo(cen[i],66,tips[i],JM.y); } }
 // where the slip (dashed) lines cross a fixed dVg (-> B list) or fixed B (-> dVg list)
 function slipBatV(Vg,e){ const ov=OV(),o=[]; if(!ov)return o; for(const s of ov.dashed){ if(s[1]===s[3])continue;
   if((Vg-s[1])*(Vg-s[3])<=0){ const B=s[0]+(Vg-s[1])/(s[3]-s[1])*(s[2]-s[0]); if(B>=e[0]&&B<=e[1])o.push(B);} } return o; }
@@ -172,6 +202,55 @@ function drawCut(ctx,box,cut,ext,xstep,xlabel,col,marker,sc,unit,marks){
   const ylab = sc? 'δG ('+fmtUnit(unit)+')' : 'δG';
   axes(ctx,box,[ext[0],ext[1],-amax,amax],xstep,amax,xlabel,ylab, v=> sc? (v*sc).toFixed(1) : v.toFixed(2));
 }
+// ---- joint-plot layout (?joint): heatmap + vertical cut at right + horizontal cut below ----
+function drawJoint(){
+  const m=M(), e=m.extent, amax=1;
+  jc.fillStyle=BG; jc.fillRect(0,0,cj.width,cj.height);
+  const JV={x:JM.x+JM.w+16,y:JM.y,w:120,h:JM.h};        // vertical cut (right), shares δV_g axis
+  const JH={x:JM.x,y:JM.y+JM.h+20,w:JM.w,h:110};        // horizontal cut (below), shares B axis
+  const X=B=>JM.x+(B-e[0])/(e[1]-e[0])*JM.w;
+  const Y=V=>JM.y+(e[3]-V)/(e[3]-e[2])*JM.h;
+  // heatmap
+  jc.imageSmoothingEnabled=true; jc.drawImage(buf().buf,JM.x,JM.y,JM.w,JM.h);
+  jc.strokeStyle='#888'; jc.lineWidth=1; jc.strokeRect(JM.x,JM.y,JM.w,JM.h);
+  jc.fillStyle=INK; jc.font='11px sans-serif'; jc.textAlign='right'; jc.textBaseline='middle';
+  for(let v=Math.ceil(e[2]/5)*5; v<=e[3]+1e-9; v+=5){ const y=Y(v);
+    jc.strokeStyle='#888'; jc.beginPath(); jc.moveTo(JM.x-4,y); jc.lineTo(JM.x,y); jc.stroke(); jc.fillText(v.toFixed(0),JM.x-6,y); }
+  jc.save(); jc.translate(JM.x-40,JM.y+JM.h/2); jc.rotate(-Math.PI/2);
+  jc.textAlign='center'; jc.textBaseline='alphabetic'; jc.fillText('δV_g (mV)',0,0); jc.restore();
+  if(OVJOINT) overlayLines(jc,X,Y,JM,{solid:false,dashCol:'#111'});   // phase-jump lines only, black (?ov)
+  // horizontal cut (below): δG vs B
+  const Hc=hcut(), YH=d=>JH.y+(amax-d)/(2*amax)*JH.h;
+  jc.strokeStyle='#888'; jc.lineWidth=1; jc.strokeRect(JH.x,JH.y,JH.w,JH.h);
+  jc.strokeStyle=ZERO; jc.beginPath(); jc.moveTo(JH.x,YH(0)); jc.lineTo(JH.x+JH.w,YH(0)); jc.stroke();
+  if(OVJOINT){ jc.save(); jc.strokeStyle='#111'; jc.lineWidth=2; jc.setLineDash([5,4]);   // phase-jump positions along this cut
+    for(const b of slipBatV(Vsel,e)){ jc.beginPath(); jc.moveTo(X(b),JH.y); jc.lineTo(X(b),JH.y+JH.h); jc.stroke(); } jc.setLineDash([]); jc.restore(); }
+  jc.strokeStyle=ABCOL; jc.lineWidth=1.8; jc.beginPath();
+  for(let i=0;i<Hc.x.length;i++){ const x=X(Hc.x[i]),y=YH(Hc.y[i]); i?jc.lineTo(x,y):jc.moveTo(x,y);} jc.stroke();
+  const span=e[1]-e[0], xstep=span>0.5?0.2:0.1;
+  jc.fillStyle=INK; jc.textAlign='center'; jc.textBaseline='top';
+  for(let v=Math.ceil(e[0]/xstep)*xstep; v<=e[1]+1e-9; v+=xstep){ const x=X(v);
+    jc.strokeStyle='#888'; jc.beginPath(); jc.moveTo(x,JH.y+JH.h); jc.lineTo(x,JH.y+JH.h+4); jc.stroke(); jc.fillText(v.toFixed(2),x,JH.y+JH.h+6); }
+  jc.textBaseline='bottom'; jc.fillText('B (T)',JH.x+JH.w/2,JH.y+JH.h+30);
+  // vertical cut (right): δG vs δV_g, δV_g vertical (shares heatmap Y)
+  const Vc=vcut(), XV=d=>JV.x+(d+amax)/(2*amax)*JV.w;
+  jc.strokeStyle='#888'; jc.lineWidth=1; jc.strokeRect(JV.x,JV.y,JV.w,JV.h);
+  jc.strokeStyle=ZERO; jc.beginPath(); jc.moveTo(XV(0),JV.y); jc.lineTo(XV(0),JV.y+JV.h); jc.stroke();
+  if(OVJOINT){ jc.save(); jc.strokeStyle='#111'; jc.lineWidth=2; jc.setLineDash([5,4]);   // phase-jump positions along this cut
+    for(const vg of slipVatB(Bsel,e)){ jc.beginPath(); jc.moveTo(JV.x,Y(vg)); jc.lineTo(JV.x+JV.w,Y(vg)); jc.stroke(); } jc.setLineDash([]); jc.restore(); }
+  jc.strokeStyle=JUMPCOL; jc.lineWidth=1.8; jc.beginPath();
+  for(let i=0;i<Vc.x.length;i++){ const x=XV(Vc.y[i]),y=Y(Vc.x[i]); i?jc.lineTo(x,y):jc.moveTo(x,y);} jc.stroke();
+  jc.fillStyle=INK; jc.textAlign='center'; jc.textBaseline='top'; jc.fillText('δG',JV.x+JV.w/2,JV.y+JV.h+6);
+  // crosshair — the two slice lines: solid + thick
+  jc.strokeStyle=CROSS; jc.lineWidth=2.4; jc.setLineDash([]);
+  jc.beginPath(); jc.moveTo(X(Bsel),JM.y); jc.lineTo(X(Bsel),JM.y+JM.h); jc.stroke();   // vertical = vcut location
+  jc.beginPath(); jc.moveTo(JM.x,Y(Vsel)); jc.lineTo(JM.x+JM.w,Y(Vsel)); jc.stroke();   // horizontal = hcut location
+  jc.lineWidth=1.4;                                                                     // carried into the cut panels
+  jc.beginPath(); jc.moveTo(X(Bsel),JH.y); jc.lineTo(X(Bsel),JH.y+JH.h); jc.stroke();
+  jc.beginPath(); jc.moveTo(JV.x,Y(Vsel)); jc.lineTo(JV.x+JV.w,Y(Vsel)); jc.stroke();
+  jc.fillStyle=CROSS; jc.beginPath(); jc.arc(X(Bsel),Y(Vsel),3.5,0,7); jc.fill();
+  if(OVJOINT) drawJumpArrows(X);                  // top-band Δθ/2π callouts (?ov)
+}
 function render(){
   Bsel=parseFloat(el('s_B').value); Vsel=parseFloat(el('s_V').value);
   const m=M(), e=m.extent;
@@ -180,6 +259,7 @@ function render(){
   el('v_sa').textContent=el('s_sa').value; el('v_sb').textContent='+'+el('s_sb').value;
   el('o_ext').textContent=e[0].toFixed(2)+'–'+e[1].toFixed(2)+' T'+(m.extent_note?' · '+m.extent_note:'');
   el('o_cm').textContent=m.scale?('±'+m.scale+' '+fmtUnit(m.unit)+(m.scale_note?' (가정)':'')):'정규화';
+  if(JOINT){ drawJoint(); return; }
   drawMap();
   const H=hcut(), V=vcut(), span=e[1]-e[0], sc=M().scale, unit=M().unit;
   const hMarks=ovOn()?slipBatV(Vsel,e):null, vMarks=ovOn()?slipVatB(Bsel,e):null;
@@ -204,15 +284,25 @@ function pick(ev){ const r=map.getBoundingClientRect(), e=M().extent;
   let b=e[0]+(px-BOX.x)/BOX.w*(e[1]-e[0]); let v=e[3]-(py-BOX.y)/BOX.h*(e[3]-e[2]);
   b=Math.max(e[0],Math.min(e[1],b)); v=Math.max(e[2],Math.min(e[3],v));
   el('s_B').value=b; el('s_V').value=v; schedule(); }
+function pickJ(ev){ const r=cj.getBoundingClientRect(), e=M().extent;   // joint canvas: map over the JM heatmap box
+  const px=(ev.clientX-r.left)*cj.width/r.width, py=(ev.clientY-r.top)*cj.height/r.height;
+  let b=e[0]+(px-JM.x)/JM.w*(e[1]-e[0]); let v=e[3]-(py-JM.y)/JM.h*(e[3]-e[2]);
+  b=Math.max(e[0],Math.min(e[1],b)); v=Math.max(e[2],Math.min(e[3],v));
+  el('s_B').value=b; el('s_V').value=v; schedule(); }
 let dragging=false;
-map.addEventListener('mousedown',e=>{dragging=true;pick(e);});
-window.addEventListener('mousemove',e=>{if(dragging)pick(e);});
+const PICK=JOINT?pickJ:pick, PICKCV=JOINT?cj:map;
+PICKCV.addEventListener('mousedown',e=>{dragging=true;PICK(e);});
+window.addEventListener('mousemove',e=>{if(dragging)PICK(e);});
 window.addEventListener('mouseup',()=>{dragging=false;});
 document.querySelectorAll('button[data-src]').forEach(b=>b.addEventListener('click',()=>{
   document.querySelectorAll('button[data-src]').forEach(x=>x.classList.remove('active')); b.classList.add('active'); setSource(b.dataset.src); }));
 for(const id of ['s_B','s_V','s_sa','s_sb']) el(id).addEventListener('input',schedule);
 el('c_slope').addEventListener('change',render);
 el('c_ov').addEventListener('change',render);
+// ?noov — hide the paper-annotation overlay (for clean embeds)
+if(new URLSearchParams(location.search).has('noov')) el('c_ov').checked=false;
+// ?joint — single composite canvas; hide the three standard plot cards
+if(JOINT){ el('card_map').style.display='none'; el('card_h').style.display='none'; el('card_v').style.display='none'; el('card_j').style.display=''; }
 setSource('fig2');
 </script>
 </body>

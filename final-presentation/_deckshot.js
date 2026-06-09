@@ -1,0 +1,20 @@
+const { chromium } = require('playwright-core');
+const path = require('path');
+(async () => {
+  const deck = process.argv[2];
+  const hash = process.argv[3] || '1';
+  const out = process.argv[4] || '_deck.png';
+  const url = 'file:///' + deck.split(path.sep).join('/') + '#' + hash;
+  const browser = await chromium.launch({ channel: 'msedge', headless: true });
+  const page = await browser.newPage({ viewport: { width: 1280, height: 720 }, deviceScaleFactor: 1.5 });
+  const errors = [];
+  page.on('console', m => { if (m.type() === 'error') errors.push(m.text()); });
+  page.on('pageerror', e => errors.push('PAGEERROR ' + e.message));
+  await page.goto(url, { waitUntil: 'networkidle' });
+  await page.waitForTimeout(1800);
+  const el = await page.$('#stage');
+  if (el) await el.screenshot({ path: out });
+  else await page.screenshot({ path: out });
+  console.log('errors:', JSON.stringify(errors));
+  await browser.close();
+})();

@@ -47,6 +47,52 @@
   /* 6-up grid (summary) */
   .cols.grid{ display:grid; grid-template-columns:repeat(3,1fr); grid-template-rows:1fr 1fr; gap:12px 18px; }
   .cols.grid .col .colbody{ font-size:13px; color:var(--sub); margin-top:4px; text-align:center; }
+  /* tight: fixed-height figure box so the equation sits right under the figure */
+  .cols.tight .col{ justify-content:center; }
+  .cols.tight .figwrap{ flex:0 0 auto; height:230px; }
+  .cols.tight .colbody{ margin-top:14px; text-align:center; font-size:15px; }
+  /* slide-4 two-column: figures top-aligned, equations/labels directly under each */
+  .cols.cols4 .col{ justify-content:flex-start; position:relative; }
+  .cols.cols4 .col:first-child{ flex:1.55 1 0; }   /* widen interferometer column */
+  .cols.cols4 .col:nth-child(2){ transform:translateY(40px); }   /* drop backscattering figure+text down */
+  .cols.cols4 .col:first-child .figwrap{ transform:translateX(50px); overflow:visible; }  /* nudge interferometer right */
+  .cols.cols4 .figwrap{ flex:0 0 auto; height:400px; }
+  .cols.cols4 .colbody{ margin-top:12px; text-align:center; font-size:22px; line-height:1.4; }
+  .cols.cols4 .colbody .cap{ font-weight:600; color:#1a2330; font-size:21px; margin:12px 0 3px; }
+  /* left block (caption+formulas): pinned to bottom, grows upward over the figure */
+  .cols.cols4 .col:first-child .colbody{ position:absolute; left:0; right:0; bottom:0; margin-top:0; }
+  /* slide-5: interferometer carried from slide 4 at identical size/position; standalone class for later tweaks */
+  .cols.cols5 .col{ justify-content:flex-start; position:relative; }
+  .cols.cols5 .col:first-child{ flex:1.55 1 0; }
+  .cols.cols5 .col:first-child .figwrap{ flex:0 0 auto; height:400px; transform:translateX(50px); overflow:visible; }
+  /* right column: phase-difference equation, vertically centered */
+  .cols.cols5 .col:nth-child(2){ justify-content:center; }
+  .cols.cols5 .col:nth-child(2) .figwrap{ display:none; }
+  .cols.cols5 .col:nth-child(2) .colbody{ margin-top:0; text-align:center; font-size:21px; }
+  /* slide-6: interferometer (left, carried from slide 5) + Fig 2 measured slices (right) */
+  .cols.cols6 .col{ justify-content:flex-start; position:relative; }
+  .cols.cols6 .col:first-child{ flex:1.55 1 0; }
+  .cols.cols6 .col:first-child .figwrap{ flex:0 0 auto; height:400px; transform:translateX(50px); overflow:visible; }
+  .cols.cols6 .col:nth-child(2) .figwrap{ flex:0 0 auto; height:400px; transform:scale(1.25); overflow:visible; }
+  /* slide-6 live controls (drive the interferometer area via postMessage) */
+  .cols.cols6 .col:first-child .colbody{ margin-top:0; }
+  .cols.cols6 .liveui{ transform:translateX(50px); width:300px; margin:18px auto 0; display:flex; flex-direction:column; gap:13px; }
+  .cols.cols6 .liveui .lrow{ display:flex; align-items:center; gap:14px; }
+  .cols.cols6 .liveui .lk{ width:30px; text-align:right; font-size:20px; color:#1a2330; }
+  .cols.cols6 .liveui .lsl{ flex:1 1 auto; accent-color:#2b6fb0; cursor:pointer; }
+  /* slide-7: only the Fig 2 joint plot carried from slide 6 (right column) at identical size/position */
+  .cols.cols7 .col{ justify-content:flex-start; position:relative; }
+  .cols.cols7 .col:first-child{ flex:1.55 1 0; }
+  .cols.cols7 .col:first-child .figwrap{ display:none; }
+  .cols.cols7 .col:nth-child(2) .figwrap{ flex:0 0 auto; height:400px; transform:scale(1.25); overflow:visible; }
+  .cols.cols7 .col:first-child{ justify-content:center; }
+  .cols.cols7 .col:first-child .colbody{ margin-top:0; }
+  .cols.cols7 .s7text{ font-size:21px; color:#1a2330; max-width:540px; margin:0 auto; }
+  .cols.cols7 .s7text .katex-display{ margin:2px 0 24px; text-align:left; }
+  .cols.cols7 .s7list{ list-style:none; margin:0 0 18px; padding:0; display:flex; flex-direction:column; gap:11px; }
+  .cols.cols7 .s7list:last-child{ margin-bottom:0; }
+  .cols.cols7 .s7list li{ position:relative; padding-left:22px; line-height:1.4; }
+  .cols.cols7 .s7list li::before{ content:"▸"; position:absolute; left:0; color:var(--accent); }
 
   /* steps: all shown at once (no sequential reveal) */
   .steps{ flex:0 0 auto; margin-top:12px; display:flex; flex-direction:column; gap:6px; }
@@ -82,6 +128,17 @@
   .divider .kicker{ font-size:16px; color:var(--sub); letter-spacing:.12em; text-transform:uppercase; }
   .divider h2{ font-size:52px; font-weight:600; letter-spacing:-.015em; margin-top:14px; }
 
+  /* table of contents (replaces the section dividers) */
+  .toc{ justify-content:center; padding:0 110px; }
+  .toc .kicker{ font-size:16px; color:var(--sub); letter-spacing:.12em; text-transform:uppercase; }
+  .toc h2{ font-size:46px; font-weight:600; letter-spacing:-.015em; margin:0 0 38px; }
+  .toc .toclist{ list-style:none; counter-reset:toc; display:flex; flex-direction:column; max-width:980px; }
+  .toc .toclist li{ counter-increment:toc; font-size:30px; font-weight:500; color:#1a2330;
+    display:flex; align-items:baseline; gap:28px; padding:20px 4px; border-top:1px solid var(--hair); }
+  .toc .toclist li:last-child{ border-bottom:1px solid var(--hair); }
+  .toc .toclist li::before{ content:counter(toc,decimal-leading-zero); color:var(--accent);
+    font-size:22px; font-weight:700; font-variant-numeric:tabular-nums; min-width:48px; }
+
   #hint{ position:fixed; bottom:8px; left:50%; transform:translateX(-50%);
     color:#888; font-size:12px; font-family:Arial,sans-serif; }
 </style>
@@ -104,22 +161,23 @@ const F = '../figures/';
 const R = '../ref-crops/';
 
 // Laughlin droplet figure (light, reused on the merged Recall slide)
-const LAUGHLIN_SVG = `<svg viewBox="0 0 720 380" xmlns="http://www.w3.org/2000/svg" font-family="Helvetica Neue,Arial,sans-serif">
-  <circle cx="240" cy="185" r="160" fill="#eaf2fb" stroke="#2b4a6f" stroke-width="2"/>
-  <text x="240" y="370" text-anchor="middle" font-size="16" fill="#2b4a6f">ν = 1/3 incompressible liquid</text>
+const LAUGHLIN_SVG = `<svg viewBox="0 80 720 262" xmlns="http://www.w3.org/2000/svg" font-family="Helvetica Neue,Arial,sans-serif">
+  <polygon points="150,95 430,95 350,300 70,300" fill="#eaf2fb" stroke="#2b4a6f" stroke-width="2"/>
+  <text x="250" y="328" text-anchor="middle" font-size="16" fill="#2b4a6f">ν = 1/3 incompressible liquid</text>
   <g fill="#1a2330">
-    <circle cx="160" cy="105" r="4"/><circle cx="220" cy="90" r="4"/><circle cx="300" cy="115" r="4"/>
-    <circle cx="350" cy="165" r="4"/><circle cx="360" cy="210" r="4"/><circle cx="330" cy="250" r="4"/>
-    <circle cx="290" cy="305" r="4"/><circle cx="220" cy="325" r="4"/><circle cx="150" cy="295" r="4"/>
-    <circle cx="110" cy="205" r="4"/><circle cx="120" cy="145" r="4"/><circle cx="190" cy="245" r="4"/>
-    <circle cx="265" cy="150" r="4"/><circle cx="170" cy="195" r="4"/><circle cx="245" cy="255" r="4"/>
+    <circle cx="180" cy="125" r="4"/><circle cx="255" cy="120" r="4"/><circle cx="330" cy="130" r="4"/><circle cx="395" cy="125" r="4"/>
+    <circle cx="300" cy="150" r="4"/><circle cx="160" cy="165" r="4"/>
+    <circle cx="140" cy="180" r="4"/><circle cx="360" cy="178" r="4"/>
+    <circle cx="130" cy="220" r="4"/><circle cx="370" cy="215" r="4"/>
+    <circle cx="175" cy="260" r="4"/><circle cx="250" cy="265" r="4"/><circle cx="325" cy="258" r="4"/>
+    <circle cx="150" cy="282" r="4"/><circle cx="295" cy="278" r="4"/>
   </g>
-  <ellipse cx="210" cy="200" rx="86" ry="62" fill="none" stroke="#1565c0" stroke-width="2.5" stroke-dasharray="7 5"/>
-  <path d="M296 196 l8 4 -8 4 z" fill="#1565c0"/>
-  <circle cx="210" cy="200" r="15" fill="#fff" stroke="#c0392b" stroke-width="2.5" stroke-dasharray="4 3"/>
-  <text x="210" y="205" text-anchor="middle" font-size="15" fill="#c0392b" font-weight="700">+</text>
-  <circle cx="296" cy="200" r="9" fill="#1565c0"/>
-  <text x="296" y="178" text-anchor="middle" font-size="13" fill="#1565c0">qp</text>
+  <ellipse cx="250" cy="197" rx="80" ry="55" fill="none" stroke="#1565c0" stroke-width="2.5" stroke-dasharray="7 5"/>
+  <path d="M338 193 l8 4 -8 4 z" fill="#1565c0"/>
+  <circle cx="250" cy="197" r="15" fill="#fff" stroke="#c0392b" stroke-width="2.5" stroke-dasharray="4 3"/>
+  <text x="250" y="202" text-anchor="middle" font-size="15" fill="#c0392b" font-weight="700">+</text>
+  <circle cx="330" cy="197" r="9" fill="#1565c0"/>
+  <text x="330" y="175" text-anchor="middle" font-size="13" fill="#1565c0">qp</text>
   <g font-size="16" fill="#222">
     <circle cx="476" cy="96" r="4" fill="#1a2330"/><text x="492" y="101">electron</text>
     <circle cx="476" cy="140" r="11" fill="#fff" stroke="#c0392b" stroke-width="2.5" stroke-dasharray="4 3"/>
@@ -128,6 +186,32 @@ const LAUGHLIN_SVG = `<svg viewBox="0 0 720 380" xmlns="http://www.w3.org/2000/s
     <text x="496" y="189">braid = encircle = 2 exchanges</text>
   </g>
   <text x="468" y="240" font-size="22" fill="#1565c0" font-weight="700">→ statistical phase 2π/3</text>
+</svg>`;
+
+// Two QPC backscattering regimes — taken directly from svg/backscattering_regimes.svg
+// (metal gates included), recoloured to the deck's light palette. Top = STRONG
+// (gates nearly meet, 2DES pinched into two lobes, electron tunnels); bottom = WEAK
+// (gates leave a neck, quasiparticle tunnels). Gates drawn behind/around the 2DES.
+const BACKSCATTER_SVG = `<svg viewBox="2720 474 930 1384" xmlns="http://www.w3.org/2000/svg" font-family="Helvetica Neue,Arial,sans-serif">
+  <text x="2740" y="518" font-size="52" font-weight="600" fill="#1a2330">Strong backscattering<tspan font-size="40" font-weight="400" fill="#5a6270">  (pinched off)</tspan></text>
+  <path d="M0 224C86.6098 165.073 229.956 76.7197 288.592 38.7526 347.228 0.785583 352.727 0.11436 384.219 0.00863534 415.712-0.0970893 420.961 0.150768 477.546 38.1178 534.131 76.0848 700.359 182.011 770 224L0 224Z" fill="#c9c08a" stroke="#8d855a" stroke-width="2.5" transform="matrix(1 0 0 -1 2754 760)"/>
+  <path d="M2754 1085C2840.61 1026.34 2983.96 938.377 3042.59 900.58 3101.23 862.782 3106.73 862.114 3138.22 862.009 3169.71 861.903 3174.96 862.15 3231.55 899.948 3288.13 937.745 3454.36 1043.2 3524 1085L2754 1085Z" fill="#c9c08a" stroke="#8d855a" stroke-width="2.5"/>
+  <path d="M2736 568C2827.02 623.115 2963.5 714.335 3022.14 751.649 3080.79 788.963 3081.82 792.462 3081.99 812.503 3082.15 832.543 3081.77 835.884 3023.12 871.893 2964.48 907.901 2800.86 1013.68 2736 1058L2736 568Z" fill="#dce8fb" stroke="#9bb3cc" stroke-width="2.5"/>
+  <path d="M0 346C55.1153 254.979 146.336 118.504 183.65 59.859 220.963 1.21344 224.462 0.176645 244.503 0.0133385 264.544-0.149968 267.884 0.232883 303.893 58.8784 339.901 117.524 445.683 281.141 490 346L0 346Z" fill="#dce8fb" stroke="#9bb3cc" stroke-width="2.5" transform="matrix(1.83697e-16 1 1 -1.83697e-16 3199 568)"/>
+  <path d="M2758.36 607.607 2888.35 690.992 2884.64 696.779 2754.64 613.393ZM2890.06 679.837 2905.79 706.259 2875.21 702.985Z" fill="#333"/>
+  <path d="M1.85597-2.89341 131.852 80.4923 128.14 86.2791-1.85597 2.89341ZM133.562 69.3375 149.286 95.7588 118.715 92.4847Z" fill="#333" transform="matrix(-1 0 0 1 2905.79 919.5)"/>
+  <path d="M3086.12 781.023 3092.84 774.548 3099.62 768.232 3106.46 762.271 3113.4 756.864 3120.45 752.21 3127.66 748.524 3135 746.074 3138.86 745.359 3142.7 745.064 3146.54 745.199 3150.45 745.752 3157.93 747.89 3165.39 751.264 3172.76 755.611 3180.11 760.742 3184.01 763.95 3179.64 769.261 3175.84 766.138 3176.06 766.3 3168.93 761.322 3169.16 761.465 3162.06 757.28 3162.39 757.451 3155.33 754.258 3155.8 754.431 3148.79 752.427 3149.25 752.526 3145.76 752.032 3146.12 752.064 3142.65 751.942 3143.03 751.934 3139.57 752.2 3139.93 752.153 3136.48 752.791 3136.95 752.671 3130.09 754.963 3130.56 754.764 3123.75 758.246 3124.07 758.054 3117.3 762.527 3117.52 762.368 3110.77 767.635 3110.91 767.517 3104.18 773.378 3104.27 773.301 3097.55 779.558 3097.59 779.52 3090.88 785.977ZM3187.04 753.083 3199.5 781.192 3169.54 774.293Z" fill="#e23b2e"/>
+  <path d="M3117 812.5C3117 799.521 3127.52 789 3140.5 789 3153.48 789 3164 799.521 3164 812.5 3164 825.479 3153.48 836 3140.5 836 3127.52 836 3117 825.479 3117 812.5Z" fill="#c0392b"/>
+  <text x="3176" y="819" font-size="38" fill="#222">e&#8198;(electron)</text>
+  <text x="2740" y="1196" font-size="52" font-weight="600" fill="#1a2330">Weak backscattering<tspan font-size="40" font-weight="400" fill="#5a6270">  (r &#8776; 0.1)</tspan></text>
+  <path d="M2736 1238C2826.88 1294.62 2977.3 1379.52 3038.83 1416.01 3100.36 1452.49 3106.13 1453.13 3139.18 1453.23 3172.23 1453.34 3177.74 1453.1 3237.11 1416.62 3296.49 1380.13 3470.92 1278.35 3544 1238L3544 1835 3542.18 1835 3512.27 1818.25C3429.11 1771.24 3289.07 1689.32 3237.11 1657.4 3177.74 1620.92 3172.23 1620.68 3139.18 1620.78 3106.13 1620.88 3100.36 1621.53 3038.83 1658.01 2985 1689.93 2863.1 1758.93 2772.58 1813.61L2737.66 1835 2736 1835Z" fill="#dce8fb" stroke="#9bb3cc" stroke-width="2.5"/>
+  <path d="M2829.36 1316.61 2959.35 1399.99 2955.64 1405.78 2825.64 1322.39ZM2961.06 1388.84 2976.79 1415.26 2946.21 1411.98Z" fill="#333"/>
+  <path d="M1.85597-2.89341 131.852 80.4923 128.14 86.2791-1.85597 2.89341ZM133.562 69.3375 149.286 95.7588 118.715 92.4847Z" fill="#333" transform="matrix(1 0 0 -1 3303.5 1415.26)"/>
+  <path d="M3.43745-0.018421 4.13423 130.004-2.74067 130.041-3.43745 0.018421ZM14.422 125.365 0.819587 152.939-13.0776 125.513Z" fill="#e23b2e" transform="matrix(-1 0 0 1 3140.32 1462.5)"/>
+  <path d="M3120.5 1540C3120.5 1529.23 3129.23 1520.5 3140 1520.5 3150.77 1520.5 3159.5 1529.23 3159.5 1540 3159.5 1550.77 3150.77 1559.5 3140 1559.5 3129.23 1559.5 3120.5 1550.77 3120.5 1540Z" fill="#fff" stroke="#c0392b" stroke-width="6"/>
+  <path d="M2801 1835C2877.04 1787.65 3002.88 1716.65 3054.36 1686.14 3105.84 1655.63 3110.67 1655.09 3138.31 1655.01 3165.96 1654.92 3170.57 1655.12 3220.25 1685.63 3269.93 1716.14 3415.86 1801.26 3477 1835L2801 1835Z" fill="#c9c08a" stroke="#8d855a" stroke-width="2.5"/>
+  <path d="M0 180C76.0367 132.648 201.883 61.6496 253.361 31.1404 304.839 0.631271 309.667 0.0918962 337.314 0.0069391 364.962-0.078018 369.571 0.121153 419.248 30.6303 468.925 61.1395 614.86 146.258 676 180L0 180Z" fill="#c9c08a" stroke="#8d855a" stroke-width="2.5" transform="matrix(1 0 0 -1 2801 1417)"/>
+  <text x="3176" y="1547" font-size="38" fill="#222">e* = e/3&#8198;(quasiparticle)</text>
 </svg>`;
 
 const DECK = [
@@ -143,55 +227,78 @@ const DECK = [
     ],
     meta:'Chanwoo Park · 2026' },
 
-  // ---- Part 1 : Recall -----------------------------------------------------
-  { type:'divider', section:'Recall', kicker:'Part 1', title:'Recall' },
+  // ---- Table of contents (replaces the old Part-1 divider) ----------------
+  { type:'toc', title:'Contents',
+    items:['Recall of lecture','Setup and results','Interpretation of results'] },
 
   // merged: Laughlin (left, with wavefunction) + braiding animation (right)
-  { type:'content', section:'Recall',
+  { type:'content', section:'Recall of Lectures',
     title:'Fractional Braiding Statistics of Laughlin Quasiparticles',
+    colsMod:'tight',
     cols:[
       { fig:{ kind:'svg', html:LAUGHLIN_SVG },
-        body:'$\\Psi_m=\\prod_{i&lt;j}(z_i-z_j)^m\\,e^{-\\sum_k|z_k|^2/4\\ell_B^2}\\;(m{=}3)$<br>'
-            +'quasihole&nbsp; $\\prod_i (z_i-\\eta)\\,\\Psi_m \\;\\Rightarrow\\; e^*=e/3$' },
+        body:'$$\\Psi(\\{z_j\\}_j;\\{\\eta_a\\}_a)\\sim\\left[\\prod_{i,a}(z_i-\\eta_a)\\right]\\left[\\prod_{i&lt;j}(z_i-z_j)^3\\right]\\exp\\left[-\\frac{1}{4\\ell_B^2}\\sum_i|z_i|^2\\right]$$' },
       { fig:{ kind:'iframe', src:V+'concepts/a1-braiding.html?embed=fig&light=1', w:1000, h:480 },
-        body:'encircle = two exchanges $\\;\\Rightarrow\\; \\theta_{\\mathrm{braid}}=2\\theta_{\\mathrm{ex}}=2\\pi/3$' },
+        body:'$$\\theta_{\\mathrm{winding}}=2\\theta_{\\mathrm{exchange}}=\\frac{2\\pi}{3}$$' },
     ] },
 
   // interferometer + conductance formula
-  { type:'content', section:'Recall',
+  { type:'content', section:'Recall of Lectures',
     title:'Quantum Hall Interferometer — Weak Backscattering',
-    fig:{ kind:'iframe', src:V+'device/b1-device-edge.html?embed=fig&light=1&N=0', w:940, h:540 },
-    steps:[
-      'Two QPCs backscatter the edge with amplitudes $r_1, r_2$',
-      'Backscattered probability current $\\;\\propto |r_1+r_2 e^{i\\theta}|^2 = r_1^2+r_2^2+2r_1r_2\\cos\\theta$',
-      'Conductance $\\;G=G_0(1-R)\\;\\Rightarrow\\;\\delta G\\propto\\cos\\theta$',
-    ] },
-
-  // ---- Part 2 : Device Design ---------------------------------------------
-  { type:'divider', section:'Device Design', kicker:'Part 2', title:'Device Design' },
-
-  // two phase sources on the real device (with quasihole); formula follows from above
-  { type:'content', section:'Device Design',
-    title:'Two Backscattering Paths: the Phase θ',
-    fig:{ kind:'iframe', src:V+'device/b1-device-edge.html?embed=fig&light=1&N=2', w:940, h:540 },
-    steps:[
-      'The phase difference $\\theta$ has two sources:',
-      'Aharonov–Bohm — enclosed flux: $\\;\\theta_{AB}=2\\pi\\frac{e^*}{e}\\frac{A_I B}{\\Phi_0}$',
-      'Anyonic — enclosed quasiparticles: $\\;N_{\\mathrm{qp}}\\,\\theta_{\\mathrm{anyon}}$',
-      '$\\theta=\\theta_{AB}+N_{\\mathrm{qp}}\\theta_{\\mathrm{anyon}}\\;\\Rightarrow\\;\\delta G\\propto\\cos\\theta$',
-    ] },
-
-  // ---- Part 3 : Interpretation of Results ---------------------------------
-  { type:'divider', section:'Results', kicker:'Interpretation of Results', title:'Interpretation of Results' },
-
-  // merged: measurement slices (left) + theory slices (right)
-  { type:'content', section:'Results · Phase slips',
-    title:'Discrete Phase Slips — Measurement & Theory',
+    colsMod:'cols4',
     cols:[
-      { fig:{ kind:'iframe', src:V+'prototypes/p-slice-measured.html?embed=fig&light=1', w:820, h:670 },
-        body:'Measured $\\delta G(B,\\delta V_g)$ (Fig 2) + cuts' },
-      { fig:{ kind:'iframe', src:V+'prototypes/p-slice-crosshair.html?embed=fig&light=1', w:820, h:670 },
-        body:'Thermal-average model + cuts' },
+      { fig:{ kind:'iframe', src:V+'device/b1-device-edge.html?embed=fig&light=1&N=0&compact', w:660, h:400 },
+        body:'<div class="cap">Reflected Current</div>$$R=|r_1+r_2e^{i\\theta}|^2=r_1^2+r_2^2+2r_1r_2\\cos\\theta$$'
+            +'<div class="cap">Conductance</div>$$G=G_0(1-R)\\implies\\delta G\\propto\\cos\\theta$$' },
+      { fig:{ kind:'svg', html:BACKSCATTER_SVG },
+        body:'Weak Backscattering regime ($r\\approx0.1$)<br>$\\implies$ scattering of quasiparticle' },
+    ] },
+
+  // two sources of phase difference — interferometer carried over from slide 4 at identical size/position
+  { type:'content', section:'Recall of Lectures',
+    title:'Quantum Hall Interferometer — Two Sources of Phase Difference',
+    colsMod:'cols5',
+    cols:[
+      { fig:{ kind:'iframe', src:V+'device/b1-device-edge.html?embed=fig&light=1&N=3&compact&area', w:660, h:400 } },
+      { fig:{ kind:'svg', html:'' },
+        body:'$$\\theta = \\underbrace{2\\pi\\frac{e^*}{e}\\frac{A_I B}{\\Phi_0}}_{\\text{Aharonov-Bohm}} + \\underbrace{N_{\\mathrm{qp}}\\theta_{\\mathrm{braid}}}_{\\text{braiding statistics}}$$' },
+    ] },
+
+  // setup and result — interferometer carried from slide 5 at identical size/position
+  { type:'content', section:'Results · Phase slips',
+    title:'Setup and Result',
+    colsMod:'cols6',
+    cols:[
+      { fig:{ kind:'iframe', src:V+'device/b1-device-edge.html?embed=fig&light=1&N=3&compact&live', w:660, h:400 },
+        body:'<div class="liveui">'
+          +'<div class="lrow"><span class="lk">$B$</span><input class="lsl" id="s6_B" type="range" min="0" max="1" step="0.01" value="0.45"></div>'
+          +'<div class="lrow"><span class="lk">$V_g$</span><input class="lsl" id="s6_Vg" type="range" min="0" max="1" step="0.01" value="0"></div>'
+          +'</div>' },
+      { fig:{ kind:'iframe', src:V+'prototypes/p-slice-measured.html?embed=fig&light=1&joint', w:820, h:470 } },
+    ] },
+
+  // anyon braid statistics — Fig 2 joint plot carried from slide 6 (right column) at identical size/position
+  { type:'content', section:'Results · Phase slips',
+    title:'Anyon Braid Statistics',
+    colsMod:'cols7',
+    cols:[
+      { fig:{ kind:'svg', html:'' },
+        body:'<div class="s7text">'
+          +'$$\\theta = 2\\pi\\frac{A_I B}{3\\Phi_0} + N_{\\mathrm{qp}}\\theta_{\\mathrm{anyon}}$$'
+          +'<ul class="s7list">'
+            +'<li>period of oscillation $= 3\\Phi_0$</li>'
+            +'<li>$V_g\\uparrow \\implies A_I\\downarrow \\implies \\theta_{\\mathrm{AB}}\\downarrow$</li>'
+            +'<li>$B\\uparrow \\implies \\theta_{\\mathrm{AB}}\\uparrow$</li>'
+          +'</ul>'
+          +'<ul class="s7list">'
+            +'<li>phase jumps by $\\Delta\\theta/2\\pi = 0.31\\pm0.04 \\approx 1/3$</li>'
+          +'</ul>'
+          +'<ul class="s7list">'
+            +'<li>$B\\uparrow \\implies$ remove quasiparticle (create quasihole)</li>'
+            +'<li>$V_g\\uparrow \\implies$ remove quasiparticle (create quasihole)</li>'
+          +'</ul>'
+          +'</div>' },
+      { fig:{ kind:'iframe', src:V+'prototypes/p-slice-measured.html?embed=fig&light=1&joint&ov', w:820, h:590 } },
     ] },
 
   { type:'content', section:'Results · Phase slips',
@@ -242,8 +349,6 @@ const DECK = [
     ], grid:true },
 
   // ---- Backup --------------------------------------------------------------
-  { type:'divider', section:'Backup', kicker:'Auxiliary', title:'Backup' },
-
   { type:'content', section:'Backup',
     title:'Transition: Constant Filling → Constant Density',
     fig:{ kind:'iframe', src:V+'concepts/a3-dos-regimes.html?embed=fig&light=1', w:760, h:440 } },
@@ -274,8 +379,8 @@ function stepsHTML(steps){
   if(!steps||!steps.length) return '';
   return '<div class="steps">' + steps.map(s=>`<div class="step">${s}</div>`).join('') + '</div>';
 }
-function colsHTML(cols, grid){
-  return `<div class="cols${grid?' grid':''}">` + cols.map(c=>
+function colsHTML(cols, grid, mod){
+  return `<div class="cols${grid?' grid':''}${mod?' '+mod:''}">` + cols.map(c=>
     `<div class="col"><div class="figwrap">${figHTML(c.fig)}</div>`
     + (c.body?`<div class="colbody">${c.body}</div>`:'') + `</div>`).join('') + `</div>`;
 }
@@ -304,9 +409,13 @@ DECK.forEach((s,i)=>{
   }else if(s.type==='divider'){
     el.className='slide divider';
     el.innerHTML=`<div class="kicker">${s.kicker||''}</div><h2>${s.title}</h2>`+foot(i,'');
+  }else if(s.type==='toc'){
+    el.className='slide toc';
+    el.innerHTML=(s.kicker?`<div class="kicker">${s.kicker}</div>`:'')+`<h2>${s.title||''}</h2>`
+      +`<ol class="toclist">`+(s.items||[]).map(it=>`<li>${it}</li>`).join('')+`</ol>`+foot(i,'');
   }else{
     el.className='slide content';
-    const bodyHTML = s.cols ? colsHTML(s.cols, s.grid)
+    const bodyHTML = s.cols ? colsHTML(s.cols, s.grid, s.colsMod)
       : `<div class="figwrap">${figHTML(s.fig)}</div>`+stepsHTML(s.steps);
     el.innerHTML=`<h2 class="slide-title">${s.title}</h2>`
       +(s.sub?`<div class="slide-sub">${s.sub}</div>`:'')
@@ -324,6 +433,20 @@ if(window.renderMathInElement) renderMathInElement(stage,{
     {left:'\\(',right:'\\)',display:false},
   ], throwOnError:false,
 });
+
+// slide-6 live interferometer: sliders -> device iframe (postMessage); keep clicks off the nav
+(function(){
+  const ui=stage.querySelector('.cols6 .liveui');
+  const fr=stage.querySelector('.cols6 .col:first-child iframe');
+  const sB=document.getElementById('s6_B'), sV=document.getElementById('s6_Vg');
+  if(!ui||!fr||!sB||!sV) return;
+  const send=()=>{ try{ fr.contentWindow&&fr.contentWindow.postMessage(
+    {type:'live', B:+sB.value, Vg:+sV.value}, '*'); }catch(e){} };
+  fr.addEventListener('load', send);                 // push initial state once the device boots
+  sB.addEventListener('input', send); sV.addEventListener('input', send);
+  ['click','mousedown','pointerdown','wheel','keydown'].forEach(ev=>
+    ui.addEventListener(ev, e=>e.stopPropagation()));
+})();
 
 // ============================================================================
 // navigation (slide-to-slide; all text shown at once)

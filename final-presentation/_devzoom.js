@@ -1,0 +1,21 @@
+const { chromium } = require('playwright-core');
+const path = require('path');
+(async () => {
+  const Vg = process.argv[2] || '0.7';
+  const B  = process.argv[3] || '0.6';
+  const out = process.argv[4] || '_dev.png';
+  const dev = 'c:/workspaces/repositories/coursework/PH49903-interferometers-and-fractional-particles/final-presentation/viz/device/b1-device-edge.html';
+  const url = 'file:///' + dev + '?embed=fig&light=1&N=3&compact&live';
+  const browser = await chromium.launch({ channel: 'msedge', headless: true });
+  const page = await browser.newPage({ viewport: { width: 900, height: 560 }, deviceScaleFactor: 2 });
+  const errors = [];
+  page.on('console', m => { if (m.type() === 'error') errors.push(m.text()); });
+  page.on('pageerror', e => errors.push('PAGEERROR ' + e.message));
+  await page.goto(url, { waitUntil: 'networkidle' });
+  await page.waitForTimeout(600);
+  await page.evaluate(({B,Vg})=>{ window.postMessage({type:'live', B:+B, Vg:+Vg}, '*'); }, {B,Vg});
+  await page.waitForTimeout(700);
+  await page.screenshot({ path: out });
+  console.log('errors:', JSON.stringify(errors));
+  await browser.close();
+})();

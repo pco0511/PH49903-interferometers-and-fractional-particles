@@ -62,6 +62,14 @@ const LIGHT=document.documentElement.classList.contains('embed-light');
 const _p=new URLSearchParams(location.search);
 if(_p.has('N')) N=Math.max(0,Math.min(5,+_p.get('N')));
 if(_p.has('T')) T=parseFloat(_p.get('T'));
+// compact: shrink the device & use a column-friendly canvas aspect so the
+// (fixed-size) legend reads larger when embedded in a narrow slide column.
+const COMPACT=_p.has('compact');
+if(COMPACT){ cv.width=760; cv.height=440; }
+// live (?live): the enclosed area becomes interactive via postMessage from the slide —
+//   B   -> opacity of the flux-threaded rectangle, V_g -> its height (paths shrink with it).
+const LIVE=_p.has('live');
+let Bfrac=0.45, Vg=0;                          // 0..1 each; Vg=0 is minimum gate (max height)
 const BG=LIGHT?'#ffffff':'#0b0d12', MESA=LIGHT?'#dce8fb':'#1e2a55', MESA_ST=LIGHT?'#9bb3cc':'#3a4a80',
       INK=LIGHT?'#222':'#cbd3df', SUB=LIGHT?'#666':'#9aa3af',
       FIELD=LIGHT?'#2b6fb0':'#7fd1ff', REFL=LIGHT?'#c8860a':'#ffd27d',
@@ -79,9 +87,20 @@ const GATES=[
  "M1915.62 1382C1935.71 1382 1952 1398.29 1952 1418.38L1952 1477.62C1952 1497.71 1935.71 1514 1915.62 1514L1345.38 1514C1325.29 1514 1309 1497.71 1309 1477.62L1309 1418.38C1309 1398.29 1325.29 1382 1345.38 1382Z",
  "M1539 1289L1719 1289L1719 1382L1539 1382Z"
 ].map(d=>new Path2D(d));
-const EDGE=new Path2D("M925.5 1304.56 1092.14 1304.72C1119.28 1304.07 1139.47 1311.39 1138.46 1344.91 1137.45 1378.42 1129.13 1596.85 1136.17 1659.34 1143.21 1721.84 1161.73 1717.96 1180.69 1719.87 1199.65 1721.78 1241.91 1722.41 1258.77 1721.02 1275.63 1719.62 1287.44 1702.81 1293.64 1676.07 1299.83 1649.34 1294.89 1586.46 1295.93 1560.6 1296.97 1534.74 1304.66 1527.85 1335.21 1526.81 1365.77 1525.77 1881.8 1526.21 1915.98 1526.65 1950.17 1527.09 1963.53 1541.6 1961.65 1567.82 1959.77 1594.03 1962.2 1645.54 1963.62 1672.14 1965.03 1698.74 1987.3 1712.95 2008.47 1721.51 2029.64 1730.07 2070.7 1725.45 2090.64 1723.48 2110.58 1721.51 2119.97 1723.53 2125.18 1662.46 2130.39 1601.39 2121.79 1385.92 2121.9 1357.05 2122.01 1328.18 2146.46 1307.4 2172.97 1306.2 2199.49 1305 2271.68 1304.28 2336.5 1304.56");
-const DASH1=new Path2D("M1148.68 1708.5C1163.22 1724.91 1169.2 1732.43 1170.7 1744.48 1172.2 1756.52 1174.23 1764.21 1169.85 1774.89 1165.48 1785.57 1155.31 1794.87 1144.45 1808.58 1133.58 1822.28 1120.06 1842.15 1119.89 1874.8 1119.72 1907.45 1115.6 2119.35 1115.99 2151.64 1116.39 2183.94 1105.89 2200.4 1085.67 2201.03 1065.46 2201.66 968.748 2201.63 918.5 2202.5");
-const DASH2=new Path2D("M1985.29 1707.5C2004.54 1721.42 2011.8 1731.17 2012.98 1748.29 2014.16 1765.41 2018.44 1774.89 2012.15 1786.63 2005.86 1798.37 1983.67 1805.88 1975.24 1818.74 1966.8 1831.6 1960.49 1840.77 1961.56 1863.79 1962.63 1886.81 1961.86 1941.28 1961.89 1964.71 1961.91 1988.13 1949.2 2000.99 1920.19 2001.4 1891.19 2001.81 1365.07 1998.21 1333.98 1999.6 1302.88 2000.99 1298.95 1981.96 1291.62 1959.63 1284.29 1937.29 1289.64 1892.51 1289.97 1865.59 1290.3 1838.67 1266.16 1813.36 1246.13 1812.84 1226.11 1812.32 1207.16 1810.98 1175.76 1812.35 1144.37 1813.71 1133.49 1837.19 1134.89 1877.06 1136.29 1916.92 1127.5 2155.07 1127.8 2181.28 1128.11 2207.5 1113.74 2223.39 1092.21 2223.06 1070.67 2222.73 943.578 2224.4 918.5 2226.5");
+const EDGE_D="M925.5 1304.56 1092.14 1304.72C1119.28 1304.07 1139.47 1311.39 1138.46 1344.91 1137.45 1378.42 1129.13 1596.85 1136.17 1659.34 1143.21 1721.84 1161.73 1717.96 1180.69 1719.87 1199.65 1721.78 1241.91 1722.41 1258.77 1721.02 1275.63 1719.62 1287.44 1702.81 1293.64 1676.07 1299.83 1649.34 1294.89 1586.46 1295.93 1560.6 1296.97 1534.74 1304.66 1527.85 1335.21 1526.81 1365.77 1525.77 1881.8 1526.21 1915.98 1526.65 1950.17 1527.09 1963.53 1541.6 1961.65 1567.82 1959.77 1594.03 1962.2 1645.54 1963.62 1672.14 1965.03 1698.74 1987.3 1712.95 2008.47 1721.51 2029.64 1730.07 2070.7 1725.45 2090.64 1723.48 2110.58 1721.51 2119.97 1723.53 2125.18 1662.46 2130.39 1601.39 2121.79 1385.92 2121.9 1357.05 2122.01 1328.18 2146.46 1307.4 2172.97 1306.2 2199.49 1305 2271.68 1304.28 2336.5 1304.56";
+const EDGE=new Path2D(EDGE_D);
+const DASH1_D="M1148.68 1708.5C1163.22 1724.91 1169.2 1732.43 1170.7 1744.48 1172.2 1756.52 1174.23 1764.21 1169.85 1774.89 1165.48 1785.57 1155.31 1794.87 1144.45 1808.58 1133.58 1822.28 1120.06 1842.15 1119.89 1874.8 1119.72 1907.45 1115.6 2119.35 1115.99 2151.64 1116.39 2183.94 1105.89 2200.4 1085.67 2201.03 1065.46 2201.66 968.748 2201.63 918.5 2202.5";
+const DASH2_D="M1985.29 1707.5C2004.54 1721.42 2011.8 1731.17 2012.98 1748.29 2014.16 1765.41 2018.44 1774.89 2012.15 1786.63 2005.86 1798.37 1983.67 1805.88 1975.24 1818.74 1966.8 1831.6 1960.49 1840.77 1961.56 1863.79 1962.63 1886.81 1961.86 1941.28 1961.89 1964.71 1961.91 1988.13 1949.2 2000.99 1920.19 2001.4 1891.19 2001.81 1365.07 1998.21 1333.98 1999.6 1302.88 2000.99 1298.95 1981.96 1291.62 1959.63 1284.29 1937.29 1289.64 1892.51 1289.97 1865.59 1290.3 1838.67 1266.16 1813.36 1246.13 1812.84 1226.11 1812.32 1207.16 1810.98 1175.76 1812.35 1144.37 1813.71 1133.49 1837.19 1134.89 1877.06 1136.29 1916.92 1127.5 2155.07 1127.8 2181.28 1128.11 2207.5 1113.74 2223.39 1092.21 2223.06 1070.67 2222.73 943.578 2224.4 918.5 2226.5";
+const DASH1=new Path2D(DASH1_D), DASH2=new Path2D(DASH2_D);
+// live: sample the two flowing dashed edges into raw-coord points so V_g can warp them per frame
+function samplePath(d,n){ const NS='http://www.w3.org/2000/svg';
+  const p=document.createElementNS(NS,'path'); p.setAttribute('d',d);
+  const L=p.getTotalLength(), pts=[];
+  for(let i=0;i<=n;i++){ const q=p.getPointAtLength(L*i/n); pts.push([q.x,q.y]); }
+  return pts; }
+const DASH1_PTS=LIVE?samplePath(DASH1_D,300):null;
+const DASH2_PTS=LIVE?samplePath(DASH2_D,360):null;
+const EDGE_PTS =LIVE?samplePath(EDGE_D ,520):null;
 
 // chamber interior (raw) where localized quasiparticles sit
 const CL=1300, CR=1958, CT=1520, CB=2008;
@@ -89,9 +108,9 @@ const CL=1300, CR=1958, CT=1520, CB=2008;
 // ---- layout & transform ------------------------------------------------------
 let SC, OX, OY;
 function layout(){
-  const padL=90, padR=200, padT=40, padB=20;   // padR reserves the right legend column
+  const padL=COMPACT?74:90, padR=200, padT=COMPACT?22:40, padB=20;   // padL leaves room for the source on the left; padR reserves the legend column
   SC=Math.min((cv.width-padL-padR)/RW, (cv.height-padT-padB)/RH);
-  OX=padL; OY=padT;
+  OX=padL; OY=COMPACT?(cv.height-RH*SC)/2:padT;  // vertically center the device in compact
 }
 function sx(rx){ return OX+(rx-RX0)*SC; }
 function sy(ry){ return OY+(ry-RY0)*SC; }
@@ -102,6 +121,22 @@ function strokeP(p,col,wpx,dash,off){
     ctx.stroke(p); });
 }
 function fillP(p,col){ withTf(()=>{ ctx.fillStyle=col; ctx.fill(p); }); }
+// live: vertical warp tied to V_g — compress the chamber band toward its centre,
+// leaving the source/ground leads (outside [CT,CB]) anchored via a smooth taper.
+function warpY(y){
+  if(!LIVE||Vg<=0) return y;
+  const cyR=(CT+CB)/2, k=0.30*Vg, VH=(CB-CT)*0.5*k, margin=150;
+  if(y>=CT&&y<=CB) return y-(y-cyR)*k;                 // inside chamber: scale toward centre
+  if(y<CT)  return y+VH*Math.max(0,1-(CT-y)/margin);  // above: ease the +VH offset back to 0
+  return y-VH*Math.max(0,1-(y-CB)/margin);             // below: ease the −VH offset back to 0
+}
+function drawDashLive(pts,col,w,dash,off){
+  ctx.save(); ctx.strokeStyle=col; ctx.lineWidth=w; ctx.lineJoin='round'; ctx.lineCap='round';
+  ctx.setLineDash(dash); ctx.lineDashOffset=off||0; ctx.beginPath();
+  for(let i=0;i<pts.length;i++){ const x=sx(pts[i][0]), y=sy(warpY(pts[i][1]));
+    if(i===0)ctx.moveTo(x,y); else ctx.lineTo(x,y); }
+  ctx.stroke(); ctx.restore();
+}
 
 function spiral(x,y,r){ ctx.strokeStyle='#ff5a5a'; ctx.lineWidth=2; ctx.beginPath();
   for(let t=0;t<=4*Math.PI;t+=0.25){ const rr=r*t/(4*Math.PI); const px=x+rr*Math.cos(t),py=y+rr*Math.sin(t); if(t===0)ctx.moveTo(px,py); else ctx.lineTo(px,py);} ctx.stroke();
@@ -153,19 +188,67 @@ function draw(){
   ctx.fillStyle=MESA; ctx.fillRect(sx(RX0),sy(RY0),RW*SC,RH*SC);
   ctx.strokeStyle=MESA_ST; ctx.lineWidth=1; ctx.strokeRect(sx(RX0),sy(RY0),RW*SC,RH*SC);
 
-  // metal gates (yellow)
-  for(const g of GATES){ fillP(g,'#c9c08a'); strokeP(g,'#8d855a',1); }
+  // metal gates (tan); in live mode the top & bottom plunger gates are the V_g electrodes (green)
+  const VG_GATE={2:1,3:1,6:1,7:1};   // [2,3]=bottom bar+stem, [6,7]=top bar+stem
+  for(let gi=0;gi<GATES.length;gi++){
+    if(LIVE&&VG_GATE[gi]){ fillP(GATES[gi],'#9ccaa6'); strokeP(GATES[gi],'#55a06d',1); }
+    else                 { fillP(GATES[gi],'#c9c08a'); strokeP(GATES[gi],'#8d855a',1); }
+  }
+  if(LIVE){                          // V_g label centred on each green plunger gate
+    ctx.save(); ctx.fillStyle='#234d2e'; ctx.textAlign='left'; ctx.textBaseline='middle';
+    for(const c of [[1631,1448],[1629,2080]]){
+      const xc=sx(c[0]), yc=sy(c[1]);
+      ctx.font='italic 21px "Cambria Math",Georgia,serif'; const wV=ctx.measureText('V').width;
+      ctx.font='italic 13px "Cambria Math",Georgia,serif'; const wg=ctx.measureText('g').width;
+      const x0=xc-(wV+1+wg)/2;
+      ctx.font='italic 21px "Cambria Math",Georgia,serif'; ctx.fillText('V',x0,yc);
+      ctx.font='italic 13px "Cambria Math",Georgia,serif'; ctx.fillText('g',x0+wV+1,yc+6);
+    }
+    ctx.restore();
+  }
 
-  // enclosed chamber extent (kept for quasiparticle placement + A_I readout), shrinks with -V
+  // enclosed chamber extent (kept for quasiparticle placement + A_I readout).
+  //   static (?area): shrinks symmetrically with the side-gate slider V.
+  //   live  (?live):  V_g shrinks only the *height*; B sets the fill opacity.
   const dep=-V;                               // raw px inset (V in [-30,0] -> 0..30)
-  const il=CL+dep, ir=CR-dep, it=CT+dep, ib=CB-dep;
+  let il=CL+dep, ir=CR-dep, it=CT+dep, ib=CB-dep;
+  let aFill, aStroke;
+  if(LIVE){
+    const VH=(CB-CT)*0.15*Vg;                 // V_g -> vertical inset (each side; ~30% total at max)
+    il=CL; ir=CR; it=CT+VH; ib=CB-VH;
+    aFill   = 0.05 + Bfrac*0.34;              // B -> opacity of the flux-threaded area
+    aStroke = 0.30 + Bfrac*0.55;
+  }else{
+    aFill   = LIGHT?0.15:0.12;
+    aStroke = LIGHT?0.6:0.5;
+  }
 
-  // inner / return edges (always present, faint, slow flow)
-  strokeP(DASH1,'rgba(255,120,120,.55)',2,[24,16],-phase*0.5);
-  strokeP(DASH2,'rgba(255,150,120,.55)',2,[12,12],-phase*0.5);
+  // enclosed interference area threaded by B — translucent highlight (?area / ?live)
+  if(_p.has('area')||LIVE){
+    const ax=sx(il), ay=sy(it), aw=(ir-il)*SC, ah=(ib-it)*SC;
+    ctx.fillStyle=LIGHT?`rgba(43,111,176,${aFill})`:`rgba(120,200,255,${aFill})`;
+    ctx.fillRect(ax,ay,aw,ah);
+    // border: static (slide 5) keeps the original solid edge; live uses a faint hairline so the
+    // moving chiral/inner paths (drawn below) — not the box — are what visibly bound the area.
+    ctx.setLineDash([]);
+    if(LIVE){ ctx.strokeStyle=LIGHT?'rgba(43,111,176,.28)':'rgba(120,200,255,.3)'; ctx.lineWidth=1; }
+    else    { ctx.strokeStyle=LIGHT?`rgba(43,111,176,${aStroke})`:`rgba(120,200,255,${aStroke})`; ctx.lineWidth=1.4; }
+    ctx.strokeRect(ax,ay,aw,ah);
+  }
 
-  // main chiral edge (enters top-left at I_source, exits top-right), animated flow
-  strokeP(EDGE,'#ff5a5a',2.6,[16,11],-phase*1.6);
+  // inner / return edges (always present, faint, slow flow) — V_g warps them in live mode
+  if(LIVE){
+    drawDashLive(DASH1_PTS,'rgba(255,120,120,.55)',2,[24,16],-phase*0.5);
+    drawDashLive(DASH2_PTS,'rgba(255,150,120,.55)',2,[12,12],-phase*0.5);
+  }else{
+    strokeP(DASH1,'rgba(255,120,120,.55)',2,[24,16],-phase*0.5);
+    strokeP(DASH2,'rgba(255,150,120,.55)',2,[12,12],-phase*0.5);
+  }
+
+  // main chiral edge (enters top-left at I_source, exits top-right), animated flow.
+  // in live mode it is warped too, so the chamber-top path moves with V_g like the bottom.
+  if(LIVE) drawDashLive(EDGE_PTS,'#ff5a5a',2.6,[16,11],-phase*1.6);
+  else     strokeP(EDGE,'#ff5a5a',2.6,[16,11],-phase*1.6);
 
   // QPC backscatter reflections (left=QPC1, right=QPC2), strength = 1-T
   refl(1215,1763,1-T); refl(2044,1763,1-T);
@@ -184,12 +267,12 @@ function draw(){
 
   // ---- source (AC, top-left) + grounds: bottom-left return, top-right drain (2x) ----
   ctx.strokeStyle=INK; ctx.lineWidth=2.6; ctx.setLineDash([]);
-  const sys=sy(1305), sxs=46, sr=26;
+  const sys=sy(1305), sxs=OX-44, sr=26;
   ctx.beginPath(); ctx.arc(sxs,sys,sr,0,2*Math.PI); ctx.stroke();
   ctx.beginPath(); ctx.moveTo(sxs-13,sys); ctx.bezierCurveTo(sxs-6,sys-13,sxs+6,sys+13,sxs+13,sys); ctx.stroke();
   ctx.beginPath(); ctx.moveTo(sxs+sr,sys); ctx.lineTo(sx(925),sys); ctx.stroke();
   // bottom-left ground (return)
-  const dys=sy(2202); ctx.beginPath(); ctx.moveTo(sx(918),dys); ctx.lineTo(50,dys); ctx.stroke(); ground(50,dys,1);
+  const dys=sy(2202); ctx.beginPath(); ctx.moveTo(sx(918),dys); ctx.lineTo(OX-40,dys); ctx.stroke(); ground(OX-40,dys,1);
   // top-right ground (drain) at the chiral-edge exit; bars point up to clear the legend
   const drx=OX+RW*SC; ctx.beginPath(); ctx.moveTo(drx,sys); ctx.lineTo(drx+30,sys); ctx.stroke(); ground(drx+30,sys,-1);
 
@@ -198,6 +281,17 @@ function draw(){
   ctx.fillText('QPC 1', sx(1215), sy(1640)); ctx.fillText('QPC 2', sx(2044), sy(1640));
   // phase difference θ where the two backscattered paths meet (lower-left)
   phaseLabel(sx(985), sy(2010));
+  // A_I·B label inside the enclosed area (bottom-right) — overlay only
+  if(_p.has('area')||LIVE){
+    const ax=sx(il), aw=(ir-il)*SC, ah=(ib-it)*SC, ay=sy(it);
+    ctx.textAlign='left'; ctx.textBaseline='alphabetic'; ctx.fillStyle=INK;
+    ctx.font='italic 20px "Cambria Math",Georgia,serif'; const wA=ctx.measureText('A').width, wB=ctx.measureText('B').width;
+    ctx.font='italic 13px "Cambria Math",Georgia,serif'; const wI=ctx.measureText('I').width;
+    const gap=6, tx=ax+aw-14-(wA+wI+2+gap+wB), ty=ay+ah-12;
+    ctx.font='italic 20px "Cambria Math",Georgia,serif'; ctx.fillText('A',tx,ty);
+    ctx.font='italic 13px "Cambria Math",Georgia,serif'; ctx.fillText('I',tx+wA+1,ty+5);
+    ctx.font='italic 20px "Cambria Math",Georgia,serif'; ctx.fillText('B',tx+wA+wI+2+gap,ty);
+  }
   // legend — vertical column to the right of the device
   const lx=OX+RW*SC+22; let ly=84; const lg=36;
   ctx.textAlign='left'; ctx.font='12px sans-serif';
@@ -224,6 +318,10 @@ el('s_T').addEventListener('input',e=>{T=parseFloat(e.target.value); el('v_T').t
 el('s_V').addEventListener('input',e=>{V=parseFloat(e.target.value); el('v_V').textContent=V.toFixed(0); });
 el('s_N').addEventListener('input',e=>{N=parseInt(e.target.value); el('v_N').textContent=N; });
 el('play').addEventListener('click',()=>{ playing=!playing; el('play').textContent=playing?'⏸ 흐름 정지':'▶ 흐름 재생'; });
+// live mode: slide drives B (area opacity) & V_g (area height) via postMessage; rAF loop repaints.
+if(LIVE) window.addEventListener('message',e=>{ const d=e.data; if(!d||d.type!=='live')return;
+  if(typeof d.B==='number')  Bfrac=Math.max(0,Math.min(1,d.B));
+  if(typeof d.Vg==='number') Vg  =Math.max(0,Math.min(1,d.Vg)); });
 loop();
 </script>
 </body>
