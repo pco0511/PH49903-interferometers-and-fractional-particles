@@ -66,11 +66,3 @@ $$
 
 세 가지 결과 slide
 
-
-## Slide 11
-
-제목: Control: $\nu=1$ shows no phase jumps, transitions
-
-(그림: SUPP. FIG. 6.)
-
-그림만

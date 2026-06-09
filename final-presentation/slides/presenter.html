@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Presenter — Anyonic braiding</title>
+<link rel="stylesheet" href="vendor/katex/katex.min.css">
+<style>
+  *{ box-sizing:border-box; margin:0; padding:0; }
+  html,body{ height:100%; }
+  body{ background:#15171c; color:#e7eaf0; font-family:'Helvetica Neue',Arial,'Apple SD Gothic Neo','Malgun Gothic',sans-serif;
+        display:flex; flex-direction:column; height:100vh; overflow:hidden; }
+  .lbl{ font-size:12px; letter-spacing:.08em; text-transform:uppercase; color:#8a93a3; margin-bottom:6px; }
+  .lbl b{ color:#cfd6e2; font-weight:600; }
+
+  .top{ display:flex; gap:16px; padding:14px 16px 8px; flex:0 0 auto; }
+  .now{ flex:1 1 auto; min-width:0; }
+  .side{ width:336px; flex:0 0 auto; display:flex; flex-direction:column; gap:12px; }
+
+  .frame{ position:relative; width:100%; background:#fff; border:1px solid #2a2f39; border-radius:8px; overflow:hidden; }
+  .now .frame{ aspect-ratio:16/9; }
+  .next .frame{ aspect-ratio:16/9; }
+  .frame iframe{ position:absolute; inset:0; width:100%; height:100%; border:0; pointer-events:none; background:#fff; }
+  .frame .end{ position:absolute; inset:0; display:none; align-items:center; justify-content:center;
+               color:#8a93a3; font-size:15px; background:#1b1e24; }
+
+  .clock{ background:#1b1e24; border:1px solid #2a2f39; border-radius:8px; padding:12px 14px; text-align:center; }
+  #time{ font-size:40px; font-variant-numeric:tabular-nums; letter-spacing:.02em; color:#fff; line-height:1.1; }
+  .clock .row{ display:flex; gap:8px; justify-content:center; margin-top:8px; }
+  .clock button{ background:#2a2f39; color:#cfd6e2; border:0; border-radius:6px; padding:5px 12px; font-size:12px; cursor:pointer; }
+  .clock button:hover{ background:#39404d; }
+
+  .notes{ flex:1 1 auto; min-height:0; margin:4px 16px 8px; display:flex; flex-direction:column; }
+  #notes{ flex:1 1 auto; overflow:auto; background:#1b1e24; border:1px solid #2a2f39; border-radius:8px;
+          padding:16px 18px; font-size:19px; line-height:1.55; color:#dfe4ec; white-space:pre-wrap; }
+  #notes .katex{ font-size:1em; color:#fff; }
+  #notes.empty{ color:#6c7686; font-style:italic; }
+
+  .bar{ flex:0 0 auto; display:flex; align-items:center; gap:12px; padding:8px 16px 14px; }
+  .bar button{ background:#2a2f39; color:#e7eaf0; border:0; border-radius:8px; padding:10px 18px; font-size:18px; cursor:pointer; }
+  .bar button:hover{ background:#39404d; }
+  .bar .hint{ color:#6c7686; font-size:13px; margin-left:auto; }
+</style>
+</head>
+<body>
+  <div class="top">
+    <div class="now">
+      <div class="lbl">현재 · <b><span id="pos">– / –</span></b></div>
+      <div class="frame"><iframe id="cur" title="current slide"></iframe></div>
+    </div>
+    <div class="side">
+      <div class="next">
+        <div class="lbl">다음</div>
+        <div class="frame"><iframe id="nxt" title="next slide"></iframe><div class="end" id="end">— 발표 끝 —</div></div>
+      </div>
+      <div class="clock">
+        <div id="time">00:00</div>
+        <div class="row"><button id="reset">타이머 reset</button></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="notes">
+    <div class="lbl">노트 — <b><span id="ntitle"></span></b></div>
+    <div id="notes" class="empty">노트 불러오는 중…</div>
+  </div>
+
+  <div class="bar">
+    <button id="prev">◀ 이전</button>
+    <button id="next">다음 ▶</button>
+    <span class="hint">← / → · Space 이동 · 미리보기는 클릭 비활성 (발표는 청중 창에서)</span>
+  </div>
+
+<script src="vendor/katex/katex.min.js"></script>
+<script src="vendor/katex/contrib/auto-render.min.js"></script>
+<script>
+"use strict";
+const cur=document.getElementById('cur'), nxt=document.getElementById('nxt'), endEl=document.getElementById('end');
+const posEl=document.getElementById('pos'), notesEl=document.getElementById('notes'), ntitleEl=document.getElementById('ntitle');
+
+let N=14;                                                   // refined from the deck once the current iframe loads
+let si=(parseInt((location.hash||'').replace('#',''))||1)-1;
+
+// ---- preview iframes: live deck instances, driven directly (no reload, no broadcast) ----
+cur.src='index.html?nosync#'+(si+1);
+nxt.src='index.html?nosync#'+(si+2);
+function drive(frame,n){ try{ const w=frame.contentWindow; if(w&&w.__deck) w.__deck.go(n); }catch(e){} }
+cur.addEventListener('load',()=>{ try{ N=cur.contentWindow.__deck.N||N; }catch(e){} goto(si,'init'); });
+
+// ---- cross-window sync (BroadcastChannel; same origin = GitHub Pages / localhost) ----
+const bc=window.BroadcastChannel ? new BroadcastChannel('phaseslip-deck') : null;
+if(bc) bc.onmessage=e=>{ const d=e.data; if(d&&d.type==='nav'&&d.si!==si) goto(d.si,'remote'); };
+
+function goto(n,how){
+  n=Math.max(0,Math.min(N-1,n)); si=n;
+  drive(cur,si);
+  const hasNext=si<N-1;
+  endEl.style.display=hasNext?'none':'flex';
+  nxt.style.visibility=hasNext?'visible':'hidden';
+  if(hasNext) drive(nxt,si+1);
+  posEl.textContent=(si+1)+' / '+N;
+  showNotes(si);
+  if(how!=='remote' && bc) bc.postMessage({type:'nav', si});   // push to the audience (and any other window)
+}
+
+// ---- navigation ----
+document.getElementById('prev').onclick=()=>goto(si-1);
+document.getElementById('next').onclick=()=>goto(si+1);
+addEventListener('keydown',e=>{
+  if(e.key==='ArrowRight'||e.key==='PageDown'||e.key===' '){ goto(si+1); e.preventDefault(); }
+  else if(e.key==='ArrowLeft'||e.key==='PageUp'){ goto(si-1); e.preventDefault(); }
+  else if(e.key==='Home'){ goto(0); }
+  else if(e.key==='End'){ goto(N-1); }
+});
+
+// ---- timer ----
+let t0=Date.now();
+function pad(x){ return (x<10?'0':'')+x; }
+function tick(){ const s=Math.floor((Date.now()-t0)/1000); document.getElementById('time').textContent=pad(Math.floor(s/60))+':'+pad(s%60); }
+setInterval(tick,250); tick();
+document.getElementById('reset').onclick=()=>{ t0=Date.now(); tick(); };
+
+// ---- speaker notes: single source of truth = ../script.md, mapped deck slide i -> "Slide i+1" ----
+const NOTES={};        // scriptSlideNumber -> { title, body }
+fetch('../script.md').then(r=>r.ok?r.text():Promise.reject()).then(txt=>{
+  let cur=null;
+  for(const line of txt.split(/\r?\n/)){
+    const m=line.match(/^##\s+Slide\s+(\d+)\s*:?\s*(.*)$/);
+    if(m){ cur={n:+m[1], title:(m[2]||'').trim(), body:[]}; NOTES[cur.n]=cur; continue; }
+    if(cur){ if(/^제목\s*:/.test(line)) continue; cur.body.push(line); }   // drop production "제목:" lines
+  }
+  for(const k in NOTES) NOTES[k].body=NOTES[k].body.join('\n').replace(/\n{3,}/g,'\n\n').trim();
+  showNotes(si);
+}).catch(()=>{ notesEl.classList.remove('empty'); notesEl.textContent='(script.md를 불러올 수 없습니다 — http/https로 서빙해야 노트가 보입니다)'; });
+
+function deckTitle(){ try{ const d=cur.contentWindow.document;            // real title from the live deck slide
+  const el=d.querySelector('.slide.on h1, .slide.on .slide-title, .slide.on h2');
+  return el?el.textContent.trim():''; }catch(e){ return ''; } }
+function showNotes(i){
+  const sec=NOTES[i+1];
+  ntitleEl.textContent=deckTitle() || (sec&&sec.title) || ('Slide '+(i+1));
+  const body=sec&&sec.body ? sec.body : '';
+  if(!body){ notesEl.classList.add('empty'); notesEl.textContent='(이 슬라이드 노트 없음)'; return; }
+  notesEl.classList.remove('empty');
+  notesEl.textContent=body;                                  // textContent + pre-wrap keeps $$…$$ in one text node
+  if(window.renderMathInElement) renderMathInElement(notesEl,{ delimiters:[
+    {left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}], throwOnError:false });
+}
+</script>
+</body>
+</html>
