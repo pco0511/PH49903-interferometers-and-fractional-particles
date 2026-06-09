@@ -6,7 +6,14 @@
 <title>P · 측정 데이터 십자선 슬라이스</title>
 <link rel="stylesheet" href="../shared/style.css">
 <script src="../shared/embed.js"></script>
-<style>canvas{cursor:crosshair}</style>
+<style>
+canvas{cursor:crosshair}
+/* KaTeX faces for the on-canvas Δθ/2π callouts (?ov) — match the slide's math typeface */
+@font-face{ font-family:'KaTeX_Main'; font-style:normal; font-weight:normal;
+  src:url('../../slides/vendor/katex/fonts/KaTeX_Main-Regular.woff2') format('woff2'); }
+@font-face{ font-family:'KaTeX_Math'; font-style:italic; font-weight:normal;
+  src:url('../../slides/vendor/katex/fonts/KaTeX_Math-Italic.woff2') format('woff2'); }
+</style>
 </head>
 <body>
 <header>
@@ -93,7 +100,7 @@ const OVJOINT=new URLSearchParams(location.search).has('ov');     // ?ov — dra
 const BOX={x:54,y:14,w:670,h:296};
 const BH={x:54,y:14,w:670,h:106};
 const BV={x:54,y:14,w:670,h:106};
-const ANNO=OVJOINT?120:0;                // ?ov — top band reserved for phase-jump arrows + labels
+const ANNO=OVJOINT?130:0;                // ?ov — top band reserved for phase-jump arrows + labels
 const JM={x:54,y:12+ANNO,w:552,h:300};   // heatmap region inside the joint canvas (?joint)
 if(OVJOINT) cj.height=470+ANNO;          // grow the joint canvas so the bottom cut still fits below the band
 let SRC='fig2', Bsel=8.85, Vsel=-17, hmCache={};
@@ -163,24 +170,30 @@ function overlayLines(g,X,Y,box,opt){ const ov=OV(); if(!ov)return; opt=opt||{};
   g.setLineDash([]); g.restore(); }
 function drawOverlay(t){ overlayLines(mc,t.X,t.Y,BOX); }
 // --- top-band phase-jump callouts (?ov): a Δθ/2π label + arrow pointing to each dashed line's top ---
-function fracLabel(cx,cy,val){ const Fnd=17,Feq=19,gap=12; jc.save(); jc.fillStyle=INK; jc.textBaseline='middle';
-  jc.font=Fnd+'px Georgia,"Times New Roman",serif'; const num='Δθ',den='2π';
-  const wF=Math.max(jc.measureText(num).width,jc.measureText(den).width);
-  jc.font=Feq+'px Georgia,"Times New Roman",serif'; const eq=' = '+val, wE=jc.measureText(eq).width;
+const KM=sz=>sz+'px KaTeX_Main', KI=sz=>'italic '+sz+'px KaTeX_Math';   // upright vs math-italic faces
+function runW(segs,sz){ let w=0; for(const s of segs){ jc.font=s[1](sz); w+=jc.measureText(s[0]).width; } return w; }
+function runDraw(segs,sz,x,y){ jc.textAlign='left'; jc.textBaseline='middle';
+  for(const s of segs){ jc.font=s[1](sz); jc.fillText(s[0],x,y); x+=jc.measureText(s[0]).width; } return x; }
+function fracLabel(cx,cy,val){ const Fnd=21, Feq=24, gap=16; jc.save(); jc.fillStyle=INK;
+  const numS=[['Δ',KM],['θ',KI]], denS=[['2',KM],['π',KI]], eqS=[[' = '+val,KM]];
+  const wNum=runW(numS,Fnd), wDen=runW(denS,Fnd), wF=Math.max(wNum,wDen), wE=runW(eqS,Feq);
   const x0=cx-(wF+wE)/2;
-  jc.textAlign='center'; jc.font=Fnd+'px Georgia,"Times New Roman",serif';
-  jc.fillText(num,x0+wF/2,cy-gap); jc.fillText(den,x0+wF/2,cy+gap);
-  jc.strokeStyle=INK; jc.lineWidth=1.3; jc.beginPath(); jc.moveTo(x0,cy); jc.lineTo(x0+wF,cy); jc.stroke();
-  jc.textAlign='left'; jc.font=Feq+'px Georgia,"Times New Roman",serif'; jc.fillText(eq,x0+wF,cy); jc.restore(); }
+  runDraw(numS,Fnd, x0+(wF-wNum)/2, cy-gap);                 // numerator Δθ
+  runDraw(denS,Fnd, x0+(wF-wDen)/2, cy+gap);                 // denominator 2π
+  jc.strokeStyle=INK; jc.lineWidth=1.2; jc.beginPath(); jc.moveTo(x0,cy); jc.lineTo(x0+wF,cy); jc.stroke();
+  runDraw(eqS,Feq, x0+wF, cy);                               // = value
+  jc.restore(); }
 function arrowTo(x0,y0,x1,y1){ jc.save(); jc.strokeStyle=INK; jc.fillStyle=INK; jc.lineWidth=2; jc.lineCap='round';
   jc.beginPath(); jc.moveTo(x0,y0); jc.lineTo(x1,y1); jc.stroke();
   const a=Math.atan2(y1-y0,x1-x0), h=9, w=0.42;
   jc.beginPath(); jc.moveTo(x1,y1); jc.lineTo(x1-h*Math.cos(a-w),y1-h*Math.sin(a-w)); jc.lineTo(x1-h*Math.cos(a+w),y1-h*Math.sin(a+w)); jc.closePath(); jc.fill(); jc.restore(); }
 function drawJumpArrows(X){ const ov=OV(); if(!ov) return;
   const vals=['−0.29','−0.28','−0.38','−0.32'];   // Δθ/2π per dashed line (paper Fig 2)
-  const tips=ov.dashed.map(s=>X(s[0])), cen=tips.slice(), MIN=110;
+  const tips=ov.dashed.map(s=>X(s[0])), cen=tips.slice(), MIN=146;
   for(let i=1;i<cen.length;i++) if(cen[i]-cen[i-1]<MIN) cen[i]=cen[i-1]+MIN;   // spread labels so they don't overlap
-  for(let i=0;i<tips.length;i++){ fracLabel(cen[i],42,vals[i]); arrowTo(cen[i],66,tips[i],JM.y); } }
+  const avg=a=>a.reduce((s,v)=>s+v,0)/a.length, sh=avg(tips)-avg(cen);
+  for(let i=0;i<cen.length;i++) cen[i]+=sh;                                     // re-center the spread group over the lines
+  for(let i=0;i<tips.length;i++){ fracLabel(cen[i],36,vals[i]); arrowTo(cen[i],74,tips[i],JM.y); } }
 // where the slip (dashed) lines cross a fixed dVg (-> B list) or fixed B (-> dVg list)
 function slipBatV(Vg,e){ const ov=OV(),o=[]; if(!ov)return o; for(const s of ov.dashed){ if(s[1]===s[3])continue;
   if((Vg-s[1])*(Vg-s[3])<=0){ const B=s[0]+(Vg-s[1])/(s[3]-s[1])*(s[2]-s[0]); if(B>=e[0]&&B<=e[1])o.push(B);} } return o; }
@@ -304,6 +317,11 @@ if(new URLSearchParams(location.search).has('noov')) el('c_ov').checked=false;
 // ?joint — single composite canvas; hide the three standard plot cards
 if(JOINT){ el('card_map').style.display='none'; el('card_h').style.display='none'; el('card_v').style.display='none'; el('card_j').style.display=''; }
 setSource('fig2');
+// preload the KaTeX faces, then repaint the joint plot so the Δθ/2π callouts use them (?ov)
+if(OVJOINT && document.fonts && document.fonts.load){
+  Promise.all([document.fonts.load('21px KaTeX_Main'), document.fonts.load('italic 21px KaTeX_Math')])
+    .then(()=>{ if(JOINT) render(); }).catch(()=>{});
+}
 </script>
 </body>
 </html>

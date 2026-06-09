@@ -74,7 +74,8 @@ const INK=LIGHT?'#222':'#cbd3df', SUB=LIGHT?'#666':'#9aa3af',
       REF=LIGHT?'#c0392b':'#E93725', ACC=LIGHT?'#1565c0':'#4ea1ff',
       PLANE0=LIGHT?'rgba(90,120,190,.10)':'rgba(120,140,200,.06)',
       PLANET=LIGHT?'rgba(21,101,192,.12)':'rgba(78,161,255,.10)';
-let denom=3, N=1, speed=1.0, playing=true, tc=0;        // tc in [0,1): braid progress (time sweep)
+const FREEZE=new URLSearchParams(location.search).has('freeze');   // ?freeze — single static frame (completed braid), no animation loop
+let denom=3, N=1, speed=1.0, playing=!FREEZE, tc=0;        // tc in [0,1): braid progress (time sweep)
 const R=0.6;                                            // in-plane orbit radius
 
 function thetaAnyon(){ return TWO/denom; }
@@ -241,7 +242,7 @@ document.querySelectorAll('#nu button').forEach(b=>b.addEventListener('click',()
   el('o_ex').textContent=denom===1?'π':'π/'+denom;
   el('o_es').textContent=denom===1?'1':'1/'+denom;
 }));
-requestAnimationFrame(loop);
+if(FREEZE){ tc=1; draw(); } else requestAnimationFrame(loop);   // freeze: render the completed braid once
 </script>
 </body>
 </html>

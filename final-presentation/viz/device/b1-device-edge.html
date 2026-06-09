@@ -60,6 +60,7 @@ const cv=document.getElementById('cv'), ctx=cv.getContext('2d');
 let T=0.90, V=0, N=2, playing=true, phase=0;
 const LIGHT=document.documentElement.classList.contains('embed-light');
 const _p=new URLSearchParams(location.search);
+const FREEZE=_p.has('freeze'); if(FREEZE) playing=false;   // ?freeze — static frame, no edge-flow animation loop
 if(_p.has('N')) N=Math.max(0,Math.min(5,+_p.get('N')));
 if(_p.has('T')) T=parseFloat(_p.get('T'));
 // compact: shrink the device & use a column-friendly canvas aspect so the
@@ -322,7 +323,7 @@ el('play').addEventListener('click',()=>{ playing=!playing; el('play').textConte
 if(LIVE) window.addEventListener('message',e=>{ const d=e.data; if(!d||d.type!=='live')return;
   if(typeof d.B==='number')  Bfrac=Math.max(0,Math.min(1,d.B));
   if(typeof d.Vg==='number') Vg  =Math.max(0,Math.min(1,d.Vg)); });
-loop();
+if(FREEZE){ draw(); } else loop();   // freeze: paint a single static frame
 </script>
 </body>
 </html>
